@@ -38,10 +38,25 @@ export async function runAgy(options: AgyExecuteOptions): Promise<AgyExecuteResu
   const timeoutMs = (options.timeoutSeconds || 600) * 1000
   const timeoutFlag = `${options.timeoutSeconds || 600}s`
 
+  const mode = options.mode || 'accept-edits'
+
+  // Autonomous directive ensuring agy never stops to ask questions or wait for human confirmation
+  const formattedInstructions = `[AUTONOMOUS EXECUTION MODE]
+You are running as an unattended background worker delegated by Claude Code.
+- Do NOT ask interactive questions, request confirmation, or pause for feedback.
+- Autonomously perform all necessary file reads, edits, creations, and command executions.
+- Verify changes where applicable (e.g. running tests, typechecks, or builds).
+- Conclude with a clear, concise summary of what was completed and verified.
+
+[TASK INSTRUCTIONS]
+${options.instructions}`
+
   const args: string[] = [
     '--print',
-    options.instructions,
+    formattedInstructions,
     '--dangerously-skip-permissions',
+    '--mode',
+    mode,
     '--output-format',
     'json',
     '--print-timeout',
@@ -54,10 +69,6 @@ export async function runAgy(options: AgyExecuteOptions): Promise<AgyExecuteResu
 
   if (options.effort) {
     args.push('--effort', options.effort)
-  }
-
-  if (options.mode) {
-    args.push('--mode', options.mode)
   }
 
   if (options.model) {
