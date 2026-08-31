@@ -4,17 +4,16 @@ A Model Context Protocol (MCP) server that empowers **Claude Code** and **Claude
 
 ---
 
-## ⚡ Quickstart (Zero-Install via `npx`)
+## 🚀 Auto-Updating Setup (Zero-Maintenance)
 
-No cloning or building needed. Run directly from GitHub using `npx`:
+By using `npx`, Claude automatically fetches and runs the latest version on startup. You never have to manually update or re-download.
 
-### For Claude Code
-Add to `~/.claude.json` or run:
+### 1. Claude Code CLI (Automatic Updates)
+Run once in your terminal:
 ```bash
 claude mcp add antigravity npx -y github:josephjerryrhule/agy-mcp
 ```
-
-Or configure manually in `~/.claude.json`:
+Or add directly to `~/.claude.json`:
 ```json
 {
   "mcpServers": {
@@ -26,7 +25,7 @@ Or configure manually in `~/.claude.json`:
 }
 ```
 
-### For Claude Desktop
+### 2. Claude Desktop (Automatic Updates)
 Add to your `claude_desktop_config.json`:
 * **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 * **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -42,7 +41,15 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-Alternatively, double-click the pre-built [`build/agy-mcp.mcpb`](build/agy-mcp.mcpb) bundle to install it into Claude Desktop with 1 click.
+---
+
+## 📦 Direct 1-Click `.mcpb` Download (Claude Desktop)
+
+If you prefer installing an `.mcpb` bundle directly into Claude Desktop:
+
+👉 **[Download Latest `agy-mcp.mcpb`](https://github.com/josephjerryrhule/agy-mcp/releases/latest/download/agy-mcp.mcpb)**
+
+Double-click the downloaded `.mcpb` file to import it into Claude Desktop.
 
 ---
 
@@ -63,17 +70,18 @@ When working on large repositories, Claude often runs into token limits when per
 
 ## ✨ Features
 
-- **Live Streaming & Real-Time Telemetry**: Live progress logs in the terminal showing reasoning effort, thinking token counts, active tool calls, and completion timers.
+- **Live Streaming & Real-Time Telemetry**: Live terminal progress logs showing reasoning effort, thinking token counts, active tool calls, and completion timers.
+- **Exact Token Savings Calculator**: Computes exact tokens processed by Antigravity vs tokens ingested by Claude, with persistent lifetime analytics.
 - **Zero-Dependency Standalone Bundle**: Pre-compiled with `esbuild`. No external runtime `node_modules` required.
-- **Automatic Changelog & Git Intelligence**: Automatically returns git diff statistics and modified file lists after execution.
-- **Works Out-of-the-Box**: Compatible with Claude Code CLI and Claude Desktop (`.mcpb` bundle included).
+- **Automatic Changelog & Git Intelligence**: Returns git diff statistics and modified file lists after execution.
+- **Automatic Silent Updates**: Runs the latest release on every launch via `npx`.
 
 ---
 
 ## 🛠️ MCP Tools Provided
 
 ### 1. `agy_execute`
-Spawns a new headless Antigravity subagent with real-time streaming feedback and tool tracing.
+Spawns a new headless Antigravity subagent with real-time streaming feedback, tool tracing, and token savings analytics.
 - `instructions` *(string, required)*: Step-by-step implementation instructions.
 - `workspace_dir` *(string, optional)*: Working directory (defaults to current project root).
 - `effort` *(enum: `low` | `medium` | `high`, default: `high`)*: Reasoning effort for Antigravity.
@@ -89,12 +97,15 @@ Sends follow-up instructions, corrections, or test feedback to an existing Antig
 - `effort` *(enum: `low` | `medium` | `high`)*
 - `timeout_seconds` *(number, default: `600`)*
 
-### 3. `agy_inspect_transcript`
+### 3. `agy_get_token_savings`
+Returns lifetime token savings metrics and delegation history across all sessions.
+
+### 4. `agy_inspect_transcript`
 Inspects recent tool calls and step-by-step actions from an Antigravity conversation log without flooding Claude's context with raw terminal logs.
 - `conversation_id` *(string, required)*
 - `max_steps` *(number, default: `20`)*
 
-### 4. `agy_get_status`
+### 5. `agy_get_status`
 Verifies that the Antigravity CLI is available and operational.
 
 ---
