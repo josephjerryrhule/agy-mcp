@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+#!/usr/bin/env node
 import{createRequire}from'module';const require=createRequire(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -21197,6 +21198,13 @@ async function getGitSummary(cwd) {
 }
 
 // src/executor/agy.ts
+var BOLD = "\x1B[1m";
+var DIM = "\x1B[2m";
+var RESET = "\x1B[0m";
+var CYAN = "\x1B[38;2;80;220;255m";
+var GREEN = "\x1B[38;2;80;235;150m";
+var YELLOW = "\x1B[38;2;255;210;70m";
+var PURPLE = "\x1B[38;2;180;120;255m";
 async function runAgy(options) {
   const cwd = options.workspaceDir || process.cwd();
   const timeoutMs = (options.timeoutSeconds || 600) * 1e3;
@@ -21218,7 +21226,7 @@ ${options.instructions}`;
     "--mode",
     mode,
     "--output-format",
-    "json",
+    "stream-json",
     "--print-timeout",
     timeoutFlag
   ];
@@ -21232,9 +21240,14 @@ ${options.instructions}`;
     args.push("--model", options.model);
   }
   return new Promise((resolve) => {
-    let stdout = "";
+    let stdoutBuffer = "";
     let stderr = "";
     let isTimedOut = false;
+    let parsedResult = null;
+    const executionTrace = [];
+    process.stderr.write(`
+${PURPLE}${BOLD}\u{1F680} [Antigravity Worker Initialized]${RESET} ${DIM}in ${cwd}${RESET}
+`);
     const proc = spawn("agy", args, {
       cwd,
       env: {
@@ -21250,7 +21263,70 @@ ${options.instructions}`;
       }, 3e3);
     }, timeoutMs);
     proc.stdout.on("data", (data) => {
-      stdout += data.toString();
+      stdoutBuffer += data.toString();
+      const lines = stdoutBuffer.split("\n");
+      stdoutBuffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed = JSON.parse(line);
+          if (options.onStreamEvent) {
+            options.onStreamEvent(parsed);
+          }
+          if (parsed.event === "step_update" && parsed.step_update) {
+            const step = parsed.step_update;
+            const idx = step.step_index ?? executionTrace.length;
+            if (step.step_type === "agent_response") {
+              const thinking = step.usage?.thinking_tokens || 0;
+              if (thinking > 0) {
+                process.stderr.write(
+                  `${CYAN}\u{1F9E0} [Antigravity Thinking]${RESET} ${DIM}${thinking.toLocaleString()} tokens${step.duration_seconds ? ` in ${step.duration_seconds.toFixed(1)}s` : ""}${RESET}
+`
+                );
+                executionTrace.push({
+                  stepIndex: idx,
+                  type: "thinking",
+                  thinkingTokens: thinking,
+                  durationSeconds: step.duration_seconds
+                });
+              }
+              if (step.text_delta) {
+                process.stderr.write(`${DIM}${step.text_delta}${RESET}`);
+              }
+            } else if (step.step_type === "tool") {
+              const toolName = step.tool_name || step.tool_info?.name || "unknown_tool";
+              const params = step.tool_info?.parameters || {};
+              const paramPreview = params.TargetFile || params.CommandLine || params.Query || params.DirectoryPath || params.AbsolutePath || params.Url || "";
+              if (step.state === "ACTIVE") {
+                process.stderr.write(
+                  `${YELLOW}\u26A1 [Antigravity Tool: ${toolName}]${RESET} ${DIM}${paramPreview}${RESET}
+`
+                );
+              } else if (step.state === "DONE") {
+                process.stderr.write(
+                  `${GREEN}\u2705 [Tool Completed]${RESET} ${DIM}${toolName}${step.duration_seconds ? ` (${step.duration_seconds.toFixed(2)}s)` : ""}${RESET}
+`
+                );
+                executionTrace.push({
+                  stepIndex: idx,
+                  type: "tool",
+                  name: toolName,
+                  details: paramPreview ? String(paramPreview) : void 0,
+                  durationSeconds: step.duration_seconds
+                });
+              }
+            }
+          } else if (parsed.event === "result" && parsed.result) {
+            parsedResult = parsed.result;
+            process.stderr.write(
+              `
+${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.result.status}, Duration: ${parsed.result.duration_seconds?.toFixed(1) || 0}s${RESET}
+`
+            );
+          }
+        } catch {
+        }
+      }
     });
     proc.stderr.on("data", (data) => {
       stderr += data.toString();
@@ -21268,38 +21344,33 @@ ${options.instructions}`;
           response: "",
           error: `Task timed out after ${options.timeoutSeconds || 600} seconds`,
           rawStderr: stderr.slice(-1e3),
+          executionTrace,
           gitChanges
         });
         return;
       }
-      try {
-        const trimmed = stdout.trim();
-        const startIdx = trimmed.indexOf("{");
-        const endIdx = trimmed.lastIndexOf("}");
-        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-          const jsonStr = trimmed.slice(startIdx, endIdx + 1);
-          const parsed = JSON.parse(jsonStr);
-          resolve({
-            success: parsed.status === "SUCCESS" || code === 0,
-            conversationId: parsed.conversation_id,
-            status: parsed.status || (code === 0 ? "SUCCESS" : "FAILED"),
-            response: parsed.response || stdout,
-            durationSeconds: parsed.duration_seconds,
-            numTurns: parsed.num_turns,
-            usage: parsed.usage,
-            gitChanges,
-            rawStderr: stderr.trim() ? stderr.slice(-1e3) : void 0
-          });
-          return;
-        }
-      } catch {
+      if (parsedResult) {
+        resolve({
+          success: parsedResult.status === "SUCCESS" || code === 0,
+          conversationId: parsedResult.conversation_id,
+          status: parsedResult.status || (code === 0 ? "SUCCESS" : "FAILED"),
+          response: parsedResult.response || "",
+          durationSeconds: parsedResult.duration_seconds,
+          numTurns: parsedResult.num_turns,
+          usage: parsedResult.usage,
+          executionTrace,
+          gitChanges,
+          rawStderr: stderr.trim() ? stderr.slice(-1e3) : void 0
+        });
+        return;
       }
       resolve({
         success: code === 0,
         status: code === 0 ? "SUCCESS" : "FAILED",
-        response: stdout.trim() || "(No output produced)",
+        response: stdoutBuffer.trim() || "(No output produced)",
         error: code !== 0 ? `Process exited with code ${code}` : void 0,
         rawStderr: stderr.trim() ? stderr.slice(-1e3) : void 0,
+        executionTrace,
         gitChanges
       });
     });
@@ -21381,11 +21452,11 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
 var execAsync2 = promisify2(exec2);
 var server = new McpServer({
   name: "antigravity-bridge",
-  version: "1.0.0"
+  version: "1.1.0"
 });
 server.tool(
   "agy_execute",
-  "Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks. Keeps Claude Code context window lean by delegating token-heavy operations.",
+  "Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks with live streaming progress, thinking token logs, and tool tracing.",
   {
     instructions: external_exports.string().describe("Detailed step-by-step instructions for agy. Specify target file paths, constraints, test commands, and exact functional requirements."),
     workspace_dir: external_exports.string().optional().describe("Target workspace directory path. Defaults to current working directory."),
@@ -21413,6 +21484,7 @@ server.tool(
       duration_seconds: result.durationSeconds,
       num_turns: result.numTurns,
       tokens_used_by_agy: result.usage,
+      execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : void 0,
       git_changes: result.gitChanges?.hasChanges ? {
         modified: result.gitChanges.modifiedFiles,
         untracked: result.gitChanges.untrackedFiles,
@@ -21433,7 +21505,7 @@ server.tool(
 );
 server.tool(
   "agy_continue",
-  "Continues an existing Antigravity conversation for follow-up adjustments, revisions, test fixing, or iterative tasks.",
+  "Continues an existing Antigravity conversation for follow-up adjustments, revisions, test fixing, or iterative tasks with real-time streaming feedback.",
   {
     conversation_id: external_exports.string().describe("The conversation ID returned from a prior agy_execute or agy_continue call."),
     instructions: external_exports.string().describe("Follow-up instructions, corrections, or next steps for the agent."),
@@ -21459,6 +21531,7 @@ server.tool(
       duration_seconds: result.durationSeconds,
       num_turns: result.numTurns,
       tokens_used_by_agy: result.usage,
+      execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : void 0,
       git_changes: result.gitChanges?.hasChanges ? {
         modified: result.gitChanges.modifiedFiles,
         untracked: result.gitChanges.untrackedFiles,

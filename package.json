@@ -1,19 +1,44 @@
 {
   "name": "agy-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Model Context Protocol (MCP) server enabling Claude Code and Claude Desktop to delegate tasks to Antigravity (agy) headless subagents.",
-  "main": "dist/server/stdio.js",
+  "main": "dist/bundle/index.mjs",
   "type": "module",
   "bin": {
-    "agy-mcp": "./dist/server/stdio.js"
+    "agy-mcp": "./dist/bundle/index.mjs"
   },
+  "files": [
+    "dist/bundle/index.mjs",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json && npm run bundle",
+    "bundle": "esbuild src/server/stdio.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/bundle/index.mjs --banner:js=\"#!/usr/bin/env node\nimport{createRequire}from'module';const require=createRequire(import.meta.url);\"",
     "bundle:mcpb": "./scripts/build-mcpb.sh",
-    "start": "node dist/server/stdio.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/bundle/index.mjs",
     "dev": "node --import tsx src/server/stdio.ts"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josephjerryrhule/agy-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "claude",
+    "claude-code",
+    "antigravity",
+    "gemini",
+    "subagents",
+    "ai"
+  ],
+  "author": "Joseph Jerry Rhule (Theme Wire)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/josephjerryrhule/agy-mcp/issues"
+  },
+  "homepage": "https://github.com/josephjerryrhule/agy-mcp#readme",
   "engines": {
     "node": ">=20.0.0"
   },
