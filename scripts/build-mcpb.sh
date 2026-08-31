@@ -24,7 +24,7 @@ cat << 'MANIFEST' > build/tmp-mcpb/manifest.json
   "version": "1.2.0",
   "description": "Enables Claude to delegate heavy coding, multi-file editing, test runs, and repository operations to Antigravity (agy) headless subagents with live streaming and token savings tracking.",
   "author": {
-    "name": "Theme Wire"
+    "name": "Joseph Jerry Rhule"
   },
   "icon": "icon.png",
   "server": {

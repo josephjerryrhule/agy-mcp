@@ -143,4 +143,4 @@ npm run bundle:mcpb
 ---
 
 ## 📄 License
-MIT © Joseph Jerry Rhule (Theme Wire)
+MIT © Joseph Jerry Rhule
