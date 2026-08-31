@@ -4,54 +4,30 @@ A Model Context Protocol (MCP) server that empowers **Claude Code** and **Claude
 
 ---
 
-## Features
+## ⚡ Quickstart (Zero-Install via `npx`)
 
-- **Real-Time Streaming & Telemetry**: Live progress logs showing reasoning effort, thinking token counts, active tool calls, and completion timers.
-- **Standalone Distribution**: Zero-dependency executable bundled with `esbuild`. No external runtime `node_modules` required to run the server.
-- **Claude Code & Claude Desktop Support**: Native stdio MCP transport + 1-click `.mcpb` bundle installer.
-- **Changelog & Git Intelligence**: Automatically returns git diff statistics and modified file lists after execution.
+No cloning or building needed. Run directly from GitHub using `npx`:
 
----
+### For Claude Code
+Add to `~/.claude.json` or run:
+```bash
+claude mcp add antigravity npx -y github:josephjerryrhule/agy-mcp
+```
 
-## Prerequisites
-
-1. **Node.js**: `v20.0.0` or newer.
-2. **Antigravity CLI (`agy`)**: Installed and authenticated on your machine.
-
----
-
-## Setup for Claude Code
-
-### Method 1: Automatic Configuration (Recommended)
-Add the server entry to your global Claude Code settings at `~/.claude.json`:
-
+Or configure manually in `~/.claude.json`:
 ```json
 {
   "mcpServers": {
     "antigravity": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["/Users/YOUR_USERNAME/path/to/agy-mcp/dist/bundle/index.mjs"]
+      "command": "npx",
+      "args": ["-y", "github:josephjerryrhule/agy-mcp"]
     }
   }
 }
 ```
 
-### Method 2: Via Claude Code CLI
-```bash
-claude mcp add antigravity node /Users/YOUR_USERNAME/path/to/agy-mcp/dist/bundle/index.mjs
-```
-
----
-
-## Setup for Claude Desktop
-
-### Method 1: 1-Click MCP Bundle (`.mcpb`)
-1. Locate the pre-built bundle file in [`build/agy-mcp.mcpb`](build/agy-mcp.mcpb).
-2. Double-click or import the `.mcpb` file into Claude Desktop.
-
-### Method 2: Manual Configuration (`claude_desktop_config.json`)
-Add the server entry to your Claude Desktop config located at:
+### For Claude Desktop
+Add to your `claude_desktop_config.json`:
 * **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 * **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
@@ -59,18 +35,42 @@ Add the server entry to your Claude Desktop config located at:
 {
   "mcpServers": {
     "antigravity": {
-      "command": "node",
-      "args": ["/Users/YOUR_USERNAME/path/to/agy-mcp/dist/bundle/index.mjs"]
+      "command": "npx",
+      "args": ["-y", "github:josephjerryrhule/agy-mcp"]
     }
   }
 }
 ```
 
-Restart Claude Desktop, and the hammer icon will display the `agy-mcp` tools.
+Alternatively, double-click the pre-built [`build/agy-mcp.mcpb`](build/agy-mcp.mcpb) bundle to install it into Claude Desktop with 1 click.
 
 ---
 
-## MCP Tools Provided
+## 🌟 Why This Exists
+
+When working on large repositories, Claude often runs into token limits when performing heavy operations like:
+- Reading dozens of repository files to understand architecture.
+- Generating large boilerplate files or multi-file refactors.
+- Running long test suites and iterative debugging loops.
+
+### The Division of Labor:
+- **Claude (The Lead Architect)**: Maintains high-level context, project structure, and user workflow preferences. Formulates explicit, pixel-perfect instructions.
+- **Antigravity (`agy`) (The Execution Engine)**: Spawns in isolated headless mode (`agy -p --dangerously-skip-permissions`), performs all heavy file edits, tool runs, and test executions, and returns a concise status diff.
+
+**Result**: Up to **90%+ token savings** for Claude's context window.
+
+---
+
+## ✨ Features
+
+- **Live Streaming & Real-Time Telemetry**: Live progress logs in the terminal showing reasoning effort, thinking token counts, active tool calls, and completion timers.
+- **Zero-Dependency Standalone Bundle**: Pre-compiled with `esbuild`. No external runtime `node_modules` required.
+- **Automatic Changelog & Git Intelligence**: Automatically returns git diff statistics and modified file lists after execution.
+- **Works Out-of-the-Box**: Compatible with Claude Code CLI and Claude Desktop (`.mcpb` bundle included).
+
+---
+
+## 🛠️ MCP Tools Provided
 
 ### 1. `agy_execute`
 Spawns a new headless Antigravity subagent with real-time streaming feedback and tool tracing.
@@ -99,9 +99,9 @@ Verifies that the Antigravity CLI is available and operational.
 
 ---
 
-## Recommended Rules for `CLAUDE.md`
+## 📋 Recommended Rules for `CLAUDE.md`
 
-Add this section to `~/.claude/CLAUDE.md` (or your project's `CLAUDE.md`):
+Add this section to `~/.claude/CLAUDE.md` (or your project's `CLAUDE.md`) so Claude knows how and when to offload heavy tasks:
 
 ```markdown
 ## Antigravity Delegation Guidelines
@@ -115,7 +115,7 @@ Add this section to `~/.claude/CLAUDE.md` (or your project's `CLAUDE.md`):
 
 ---
 
-## Building from Source
+## 🔧 Building from Source
 
 ```bash
 # Clone the repository
@@ -131,5 +131,5 @@ npm run bundle:mcpb
 
 ---
 
-## License
-MIT
+## 📄 License
+MIT © Joseph Jerry Rhule (Theme Wire)
