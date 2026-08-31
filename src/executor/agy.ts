@@ -10,6 +10,7 @@ export interface AgyExecuteOptions {
   model?: string
   timeoutSeconds?: number
   includeGitDiff?: boolean
+  onStreamEvent?: (event: any) => void
 }
 
 export interface AgyUsage {
@@ -20,6 +21,15 @@ export interface AgyUsage {
   total_tokens?: number
 }
 
+export interface AgyStepTrace {
+  stepIndex: number
+  type: string
+  name?: string
+  details?: string
+  durationSeconds?: number
+  thinkingTokens?: number
+}
+
 export interface AgyExecuteResult {
   success: boolean
   conversationId?: string
@@ -28,10 +38,20 @@ export interface AgyExecuteResult {
   durationSeconds?: number
   numTurns?: number
   usage?: AgyUsage
+  executionTrace?: AgyStepTrace[]
   gitChanges?: GitSummary
   error?: string
   rawStderr?: string
 }
+
+// ANSI styling for live terminal output
+const BOLD = '\x1b[1m'
+const DIM = '\x1b[2m'
+const RESET = '\x1b[0m'
+const CYAN = '\x1b[38;2;80;220;255m'
+const GREEN = '\x1b[38;2;80;235;150m'
+const YELLOW = '\x1b[38;2;255;210;70m'
+const PURPLE = '\x1b[38;2;180;120;255m'
 
 export async function runAgy(options: AgyExecuteOptions): Promise<AgyExecuteResult> {
   const cwd = options.workspaceDir || process.cwd()
@@ -40,7 +60,6 @@ export async function runAgy(options: AgyExecuteOptions): Promise<AgyExecuteResu
 
   const mode = options.mode || 'accept-edits'
 
-  // Autonomous directive ensuring agy never stops to ask questions or wait for human confirmation
   const formattedInstructions = `[AUTONOMOUS EXECUTION MODE]
 You are running as an unattended background worker delegated by Claude Code.
 - Do NOT ask interactive questions, request confirmation, or pause for feedback.
@@ -58,7 +77,7 @@ ${options.instructions}`
     '--mode',
     mode,
     '--output-format',
-    'json',
+    'stream-json',
     '--print-timeout',
     timeoutFlag,
   ]
@@ -76,9 +95,14 @@ ${options.instructions}`
   }
 
   return new Promise<AgyExecuteResult>((resolve) => {
-    let stdout = ''
+    let stdoutBuffer = ''
     let stderr = ''
     let isTimedOut = false
+
+    let parsedResult: any = null
+    const executionTrace: AgyStepTrace[] = []
+
+    process.stderr.write(`\n${PURPLE}${BOLD}🚀 [Antigravity Worker Initialized]${RESET} ${DIM}in ${cwd}${RESET}\n`)
 
     const proc = spawn('agy', args, {
       cwd,
@@ -97,7 +121,84 @@ ${options.instructions}`
     }, timeoutMs)
 
     proc.stdout.on('data', (data) => {
-      stdout += data.toString()
+      stdoutBuffer += data.toString()
+      const lines = stdoutBuffer.split('\n')
+      stdoutBuffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (!line.trim()) continue
+        try {
+          const parsed = JSON.parse(line)
+          if (options.onStreamEvent) {
+            options.onStreamEvent(parsed)
+          }
+
+          // Handle step updates
+          if (parsed.event === 'step_update' && parsed.step_update) {
+            const step = parsed.step_update
+            const idx = step.step_index ?? executionTrace.length
+
+            if (step.step_type === 'agent_response') {
+              const thinking = step.usage?.thinking_tokens || 0
+              if (thinking > 0) {
+                process.stderr.write(
+                  `${CYAN}🧠 [Antigravity Thinking]${RESET} ${DIM}${thinking.toLocaleString()} tokens${
+                    step.duration_seconds ? ` in ${step.duration_seconds.toFixed(1)}s` : ''
+                  }${RESET}\n`
+                )
+                executionTrace.push({
+                  stepIndex: idx,
+                  type: 'thinking',
+                  thinkingTokens: thinking,
+                  durationSeconds: step.duration_seconds,
+                })
+              }
+              if (step.text_delta) {
+                process.stderr.write(`${DIM}${step.text_delta}${RESET}`)
+              }
+            } else if (step.step_type === 'tool') {
+              const toolName = step.tool_name || step.tool_info?.name || 'unknown_tool'
+              const params = step.tool_info?.parameters || {}
+              const paramPreview =
+                params.TargetFile ||
+                params.CommandLine ||
+                params.Query ||
+                params.DirectoryPath ||
+                params.AbsolutePath ||
+                params.Url ||
+                ''
+
+              if (step.state === 'ACTIVE') {
+                process.stderr.write(
+                  `${YELLOW}⚡ [Antigravity Tool: ${toolName}]${RESET} ${DIM}${paramPreview}${RESET}\n`
+                )
+              } else if (step.state === 'DONE') {
+                process.stderr.write(
+                  `${GREEN}✅ [Tool Completed]${RESET} ${DIM}${toolName}${
+                    step.duration_seconds ? ` (${step.duration_seconds.toFixed(2)}s)` : ''
+                  }${RESET}\n`
+                )
+                executionTrace.push({
+                  stepIndex: idx,
+                  type: 'tool',
+                  name: toolName,
+                  details: paramPreview ? String(paramPreview) : undefined,
+                  durationSeconds: step.duration_seconds,
+                })
+              }
+            }
+          } else if (parsed.event === 'result' && parsed.result) {
+            parsedResult = parsed.result
+            process.stderr.write(
+              `\n${GREEN}${BOLD}✨ [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.result.status}, Duration: ${
+                parsed.result.duration_seconds?.toFixed(1) || 0
+              }s${RESET}\n`
+            )
+          }
+        } catch {
+          // Ignore non-JSON line chunks
+        }
+      }
     })
 
     proc.stderr.on('data', (data) => {
@@ -119,44 +220,36 @@ ${options.instructions}`
           response: '',
           error: `Task timed out after ${options.timeoutSeconds || 600} seconds`,
           rawStderr: stderr.slice(-1000),
+          executionTrace,
           gitChanges,
         })
         return
       }
 
-      // Parse JSON output from agy
-      try {
-        const trimmed = stdout.trim()
-        // Sometimes leading/trailing non-JSON logs exist; find the outer JSON block
-        const startIdx = trimmed.indexOf('{')
-        const endIdx = trimmed.lastIndexOf('}')
-        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-          const jsonStr = trimmed.slice(startIdx, endIdx + 1)
-          const parsed = JSON.parse(jsonStr)
-
-          resolve({
-            success: parsed.status === 'SUCCESS' || code === 0,
-            conversationId: parsed.conversation_id,
-            status: parsed.status || (code === 0 ? 'SUCCESS' : 'FAILED'),
-            response: parsed.response || stdout,
-            durationSeconds: parsed.duration_seconds,
-            numTurns: parsed.num_turns,
-            usage: parsed.usage,
-            gitChanges,
-            rawStderr: stderr.trim() ? stderr.slice(-1000) : undefined,
-          })
-          return
-        }
-      } catch {
-        // fallback if JSON parse fails
+      if (parsedResult) {
+        resolve({
+          success: parsedResult.status === 'SUCCESS' || code === 0,
+          conversationId: parsedResult.conversation_id,
+          status: parsedResult.status || (code === 0 ? 'SUCCESS' : 'FAILED'),
+          response: parsedResult.response || '',
+          durationSeconds: parsedResult.duration_seconds,
+          numTurns: parsedResult.num_turns,
+          usage: parsedResult.usage,
+          executionTrace,
+          gitChanges,
+          rawStderr: stderr.trim() ? stderr.slice(-1000) : undefined,
+        })
+        return
       }
 
+      // Fallback
       resolve({
         success: code === 0,
         status: code === 0 ? 'SUCCESS' : 'FAILED',
-        response: stdout.trim() || '(No output produced)',
+        response: stdoutBuffer.trim() || '(No output produced)',
         error: code !== 0 ? `Process exited with code ${code}` : undefined,
         rawStderr: stderr.trim() ? stderr.slice(-1000) : undefined,
+        executionTrace,
         gitChanges,
       })
     })

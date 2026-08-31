@@ -11,13 +11,13 @@ const execAsync = promisify(exec)
 
 const server = new McpServer({
   name: 'antigravity-bridge',
-  version: '1.0.0',
+  version: '1.1.0',
 })
 
 // Tool 1: agy_execute
 server.tool(
   'agy_execute',
-  'Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks. Keeps Claude Code context window lean by delegating token-heavy operations.',
+  'Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks with live streaming progress, thinking token logs, and tool tracing.',
   {
     instructions: z.string().describe('Detailed step-by-step instructions for agy. Specify target file paths, constraints, test commands, and exact functional requirements.'),
     workspace_dir: z.string().optional().describe('Target workspace directory path. Defaults to current working directory.'),
@@ -46,6 +46,7 @@ server.tool(
       duration_seconds: result.durationSeconds,
       num_turns: result.numTurns,
       tokens_used_by_agy: result.usage,
+      execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : undefined,
       git_changes: result.gitChanges?.hasChanges
         ? {
             modified: result.gitChanges.modifiedFiles,
@@ -71,7 +72,7 @@ server.tool(
 // Tool 2: agy_continue
 server.tool(
   'agy_continue',
-  'Continues an existing Antigravity conversation for follow-up adjustments, revisions, test fixing, or iterative tasks.',
+  'Continues an existing Antigravity conversation for follow-up adjustments, revisions, test fixing, or iterative tasks with real-time streaming feedback.',
   {
     conversation_id: z.string().describe('The conversation ID returned from a prior agy_execute or agy_continue call.'),
     instructions: z.string().describe('Follow-up instructions, corrections, or next steps for the agent.'),
@@ -98,6 +99,7 @@ server.tool(
       duration_seconds: result.durationSeconds,
       num_turns: result.numTurns,
       tokens_used_by_agy: result.usage,
+      execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : undefined,
       git_changes: result.gitChanges?.hasChanges
         ? {
             modified: result.gitChanges.modifiedFiles,
