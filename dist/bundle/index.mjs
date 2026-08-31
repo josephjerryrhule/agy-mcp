@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-#!/usr/bin/env node
 import{createRequire}from'module';const require=createRequire(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -3231,8 +3230,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path2) {
-      let input = path2;
+    function removeDotSegments(path3) {
+      let input = path3;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3484,8 +3483,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path2, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path2 && path2 !== "/" ? path2 : void 0;
+        const [path3, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path3 && path3 !== "/" ? path3 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6904,12 +6903,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs2, exportName) {
+    function addFormats(ajv, list, fs3, exportName) {
       var _a;
       var _b;
       (_a = (_b = ajv.opts.code).formats) !== null && _a !== void 0 ? _a : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs2[f]);
+        ajv.addFormat(f, fs3[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7395,8 +7394,8 @@ function getErrorMap() {
 
 // ../gws-mcp/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path2, errorMaps, issueData } = params;
-  const fullPath = [...path2, ...issueData.path || []];
+  const { data, path: path3, errorMaps, issueData } = params;
+  const fullPath = [...path3, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7512,11 +7511,11 @@ var errorUtil;
 
 // ../gws-mcp/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path2, key) {
+  constructor(parent, value, path3, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path2;
+    this._path = path3;
     this._key = key;
   }
   get path() {
@@ -11153,10 +11152,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path2) {
-  if (!path2)
+function getElementAtPath(obj, path3) {
+  if (!path3)
     return obj;
-  return path2.reduce((acc, key) => acc?.[key], obj);
+  return path3.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11476,11 +11475,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path2, issues) {
+function prefixIssues(path3, issues) {
   return issues.map((iss) => {
     var _a;
     (_a = iss).path ?? (_a.path = []);
-    iss.path.unshift(path2);
+    iss.path.unshift(path3);
     return iss;
   });
 }
@@ -14891,11 +14890,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path2) {
-  if (path2.length === 0) {
+function getDotPath(path3) {
+  if (path3.length === 0) {
     return "object root";
   }
-  return path2.reduce((acc, seg, index) => {
+  return path3.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -21448,15 +21447,87 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
   }
 }
 
+// src/utils/savings.ts
+import fs2 from "node:fs/promises";
+import path2 from "node:path";
+import os2 from "node:os";
+function getStoragePath() {
+  const homeDir = os2.homedir();
+  return path2.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
+}
+async function loadStorage() {
+  const filePath = getStoragePath();
+  try {
+    const data = await fs2.readFile(filePath, "utf8");
+    return JSON.parse(data);
+  } catch {
+    return {
+      lifetimeTokensProcessed: 0,
+      lifetimeClaudeContextSaved: 0,
+      totalTasksDelegated: 0,
+      history: []
+    };
+  }
+}
+async function saveStorage(storage) {
+  const filePath = getStoragePath();
+  try {
+    await fs2.mkdir(path2.dirname(filePath), { recursive: true });
+    await fs2.writeFile(filePath, JSON.stringify(storage, null, 2), "utf8");
+  } catch {
+  }
+}
+async function calculateAndRecordSavings(agyTotalTokens, instructionLength, responseLength, conversationId) {
+  const claudeTokens = Math.max(1, Math.round((instructionLength + responseLength) / 4));
+  const agyTokens = Math.max(0, agyTotalTokens);
+  const savedTokens = Math.max(0, agyTokens - claudeTokens);
+  const savingsPct = agyTokens > 0 ? `${Math.max(0, savedTokens / agyTokens * 100).toFixed(1)}%` : "0.0%";
+  const storage = await loadStorage();
+  storage.lifetimeTokensProcessed += agyTokens;
+  storage.lifetimeClaudeContextSaved += savedTokens;
+  storage.totalTasksDelegated += 1;
+  storage.history.push({
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    conversationId,
+    agyTokens,
+    claudeTokens,
+    savedTokens
+  });
+  if (storage.history.length > 100) {
+    storage.history = storage.history.slice(-100);
+  }
+  await saveStorage(storage);
+  return {
+    tokensProcessedByAntigravity: agyTokens,
+    tokensIngestedByClaude: claudeTokens,
+    tokensSavedInClaudeContext: savedTokens,
+    savingsPercentage: savingsPct,
+    lifetimeTokensProcessed: storage.lifetimeTokensProcessed,
+    lifetimeClaudeContextSaved: storage.lifetimeClaudeContextSaved,
+    totalTasksDelegated: storage.totalTasksDelegated
+  };
+}
+async function getSavingsSummary() {
+  const storage = await loadStorage();
+  const overallPct = storage.lifetimeTokensProcessed > 0 ? `${(storage.lifetimeClaudeContextSaved / storage.lifetimeTokensProcessed * 100).toFixed(1)}%` : "0.0%";
+  return {
+    totalTasksDelegated: storage.totalTasksDelegated,
+    lifetimeTokensProcessed: storage.lifetimeTokensProcessed,
+    lifetimeClaudeContextSaved: storage.lifetimeClaudeContextSaved,
+    overallSavingsPercentage: overallPct,
+    recentTasks: storage.history.slice(-10)
+  };
+}
+
 // src/server/stdio.ts
 var execAsync2 = promisify2(exec2);
 var server = new McpServer({
   name: "antigravity-bridge",
-  version: "1.1.0"
+  version: "1.2.0"
 });
 server.tool(
   "agy_execute",
-  "Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks with live streaming progress, thinking token logs, and tool tracing.",
+  "Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks with live streaming progress, thinking token logs, tool tracing, and token savings metrics.",
   {
     instructions: external_exports.string().describe("Detailed step-by-step instructions for agy. Specify target file paths, constraints, test commands, and exact functional requirements."),
     workspace_dir: external_exports.string().optional().describe("Target workspace directory path. Defaults to current working directory."),
@@ -21476,6 +21547,13 @@ server.tool(
       timeoutSeconds: args.timeout_seconds,
       includeGitDiff: args.include_git_diff
     });
+    const totalAgyTokens = result.usage?.total_tokens || 0;
+    const savings = await calculateAndRecordSavings(
+      totalAgyTokens,
+      args.instructions.length,
+      result.response.length,
+      result.conversationId
+    );
     const payload = {
       success: result.success,
       status: result.status,
@@ -21483,6 +21561,14 @@ server.tool(
       response: result.response,
       duration_seconds: result.durationSeconds,
       num_turns: result.numTurns,
+      token_savings_metrics: {
+        tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
+        tokens_ingested_by_claude: savings.tokensIngestedByClaude,
+        net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
+        task_savings_percentage: savings.savingsPercentage,
+        lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
+        total_tasks_delegated: savings.totalTasksDelegated
+      },
       tokens_used_by_agy: result.usage,
       execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : void 0,
       git_changes: result.gitChanges?.hasChanges ? {
@@ -21505,7 +21591,7 @@ server.tool(
 );
 server.tool(
   "agy_continue",
-  "Continues an existing Antigravity conversation for follow-up adjustments, revisions, test fixing, or iterative tasks with real-time streaming feedback.",
+  "Continues an existing Antigravity conversation for follow-up adjustments, revisions, test fixing, or iterative tasks with real-time streaming and token savings tracking.",
   {
     conversation_id: external_exports.string().describe("The conversation ID returned from a prior agy_execute or agy_continue call."),
     instructions: external_exports.string().describe("Follow-up instructions, corrections, or next steps for the agent."),
@@ -21523,6 +21609,13 @@ server.tool(
       timeoutSeconds: args.timeout_seconds,
       includeGitDiff: args.include_git_diff
     });
+    const totalAgyTokens = result.usage?.total_tokens || 0;
+    const savings = await calculateAndRecordSavings(
+      totalAgyTokens,
+      args.instructions.length,
+      result.response.length,
+      result.conversationId || args.conversation_id
+    );
     const payload = {
       success: result.success,
       status: result.status,
@@ -21530,6 +21623,14 @@ server.tool(
       response: result.response,
       duration_seconds: result.durationSeconds,
       num_turns: result.numTurns,
+      token_savings_metrics: {
+        tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
+        tokens_ingested_by_claude: savings.tokensIngestedByClaude,
+        net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
+        task_savings_percentage: savings.savingsPercentage,
+        lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
+        total_tasks_delegated: savings.totalTasksDelegated
+      },
       tokens_used_by_agy: result.usage,
       execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : void 0,
       git_changes: result.gitChanges?.hasChanges ? {
@@ -21545,6 +21646,22 @@ server.tool(
         {
           type: "text",
           text: JSON.stringify(payload, null, 2)
+        }
+      ]
+    };
+  }
+);
+server.tool(
+  "agy_get_token_savings",
+  "Returns lifetime token savings analytics and history of context window saved across all Antigravity delegations.",
+  {},
+  async () => {
+    const summary = await getSavingsSummary();
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(summary, null, 2)
         }
       ]
     };

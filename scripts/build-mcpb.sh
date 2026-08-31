@@ -9,10 +9,9 @@ npx -y esbuild src/server/stdio.ts \
   --target=node20 \
   --format=esm \
   --outfile=build/tmp-mcpb/server/index.mjs \
-  --banner:js="#!/usr/bin/env node
-import{createRequire}from'module';const require=createRequire(import.meta.url);"
+  --banner:js="import{createRequire}from'module';const require=createRequire(import.meta.url);"
 
-# Also copy to dist/bundle for npm / local running
+# Copy to dist/bundle
 cp build/tmp-mcpb/server/index.mjs dist/bundle/index.mjs
 chmod +x dist/bundle/index.mjs
 
@@ -22,8 +21,8 @@ cat << 'MANIFEST' > build/tmp-mcpb/manifest.json
   "manifest_version": "0.2",
   "name": "agy-mcp",
   "display_name": "Antigravity Bridge",
-  "version": "1.1.0",
-  "description": "Enables Claude to delegate heavy coding, multi-file editing, test runs, and repository operations to Antigravity (agy) headless subagents with live streaming.",
+  "version": "1.2.0",
+  "description": "Enables Claude to delegate heavy coding, multi-file editing, test runs, and repository operations to Antigravity (agy) headless subagents with live streaming and token savings tracking.",
   "author": {
     "name": "Theme Wire"
   },
