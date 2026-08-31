@@ -64,7 +64,7 @@ When working on large repositories, Claude often runs into token limits when per
 - **Claude (The Lead Architect)**: Maintains high-level context, project structure, and user workflow preferences. Formulates explicit, pixel-perfect instructions.
 - **Antigravity (`agy`) (The Execution Engine)**: Spawns in isolated headless mode (`agy -p --dangerously-skip-permissions`), performs all heavy file edits, tool runs, and test executions, and returns a concise status diff.
 
-**Result**: Up to **90%+ token savings** for Claude's context window.
+**Result**: Keeps Claude's context window lean and fast while Antigravity handles heavy file edits, exploration, and command executions.
 
 ---
 
