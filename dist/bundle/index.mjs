@@ -3230,8 +3230,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path3) {
-      let input = path3;
+    function removeDotSegments(path4) {
+      let input = path4;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3483,8 +3483,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path3, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path3 && path3 !== "/" ? path3 : void 0;
+        const [path4, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path4 && path4 !== "/" ? path4 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -7394,8 +7394,8 @@ function getErrorMap() {
 
 // ../gws-mcp/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path3, errorMaps, issueData } = params;
-  const fullPath = [...path3, ...issueData.path || []];
+  const { data, path: path4, errorMaps, issueData } = params;
+  const fullPath = [...path4, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7511,11 +7511,11 @@ var errorUtil;
 
 // ../gws-mcp/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path3, key) {
+  constructor(parent, value, path4, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path3;
+    this._path = path4;
     this._key = key;
   }
   get path() {
@@ -11152,10 +11152,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path4) {
+  if (!path4)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path4.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11475,11 +11475,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path4, issues) {
   return issues.map((iss) => {
     var _a;
     (_a = iss).path ?? (_a.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path4);
     return iss;
   });
 }
@@ -14890,11 +14890,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path3) {
-  if (path3.length === 0) {
+function getDotPath(path4) {
+  if (path4.length === 0) {
     return "object root";
   }
-  return path3.reduce((acc, seg, index) => {
+  return path4.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -21156,6 +21156,7 @@ import { promisify as promisify2 } from "node:util";
 
 // src/executor/agy.ts
 import { spawn } from "node:child_process";
+import path from "node:path";
 
 // src/utils/git.ts
 import { exec } from "node:child_process";
@@ -21205,16 +21206,20 @@ var GREEN = "\x1B[38;2;80;235;150m";
 var YELLOW = "\x1B[38;2;255;210;70m";
 var PURPLE = "\x1B[38;2;180;120;255m";
 async function runAgy(options) {
-  const cwd = options.workspaceDir || process.cwd();
+  const cwd = path.resolve(options.workspaceDir || process.cwd());
   const timeoutMs = (options.timeoutSeconds || 600) * 1e3;
   const timeoutFlag = `${options.timeoutSeconds || 600}s`;
   const mode = options.mode || "accept-edits";
   const formattedInstructions = `[AUTONOMOUS EXECUTION MODE]
-You are running as an unattended background worker delegated by Claude Code.
+You are running as an unattended background worker delegated by Claude.
 - Do NOT ask interactive questions, request confirmation, or pause for feedback.
 - Autonomously perform all necessary file reads, edits, creations, and command executions.
 - Verify changes where applicable (e.g. running tests, typechecks, or builds).
 - Conclude with a clear, concise summary of what was completed and verified.
+
+[TARGET WORKSPACE]
+Workspace Directory: ${cwd}
+All project files, edits, creations, and commands must be scoped within this workspace directory.
 
 [TASK INSTRUCTIONS]
 ${options.instructions}`;
@@ -21222,6 +21227,8 @@ ${options.instructions}`;
     "--print",
     formattedInstructions,
     "--dangerously-skip-permissions",
+    "--add-dir",
+    cwd,
     "--mode",
     mode,
     "--output-format",
@@ -21387,11 +21394,11 @@ ${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.resu
 
 // src/utils/transcript.ts
 import fs from "node:fs/promises";
-import path from "node:path";
+import path2 from "node:path";
 import os from "node:os";
 async function inspectTranscript(conversationId, maxSteps = 20) {
   const homeDir = os.homedir();
-  const transcriptPath = path.join(
+  const transcriptPath = path2.join(
     homeDir,
     ".gemini",
     "antigravity-cli",
@@ -21449,11 +21456,11 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
 
 // src/utils/savings.ts
 import fs2 from "node:fs/promises";
-import path2 from "node:path";
+import path3 from "node:path";
 import os2 from "node:os";
 function getStoragePath() {
   const homeDir = os2.homedir();
-  return path2.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
+  return path3.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
 }
 async function loadStorage() {
   const filePath = getStoragePath();
@@ -21472,7 +21479,7 @@ async function loadStorage() {
 async function saveStorage(storage) {
   const filePath = getStoragePath();
   try {
-    await fs2.mkdir(path2.dirname(filePath), { recursive: true });
+    await fs2.mkdir(path3.dirname(filePath), { recursive: true });
     await fs2.writeFile(filePath, JSON.stringify(storage, null, 2), "utf8");
   } catch {
   }
@@ -21523,14 +21530,14 @@ async function getSavingsSummary() {
 var execAsync2 = promisify2(exec2);
 var server = new McpServer({
   name: "antigravity-bridge",
-  version: "1.2.0"
+  version: "1.2.1"
 });
 server.tool(
   "agy_execute",
   "Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks with live streaming progress, thinking token logs, tool tracing, and token savings metrics.",
   {
     instructions: external_exports.string().describe("Detailed step-by-step instructions for agy. Specify target file paths, constraints, test commands, and exact functional requirements."),
-    workspace_dir: external_exports.string().optional().describe("Target workspace directory path. Defaults to current working directory."),
+    workspace_dir: external_exports.string().optional().describe("Target workspace directory path (absolute path recommended, especially in Claude Desktop). Defaults to current working directory."),
     effort: external_exports.enum(["low", "medium", "high"]).optional().default("high").describe("Reasoning effort (low, medium, high). Default is high."),
     mode: external_exports.enum(["accept-edits", "plan"]).optional().default("accept-edits").describe("Execution mode: accept-edits (standard autonomous editing) or plan (planning mode)."),
     model: external_exports.string().optional().describe("Optional specific model identifier for agy."),
@@ -21595,7 +21602,7 @@ server.tool(
   {
     conversation_id: external_exports.string().describe("The conversation ID returned from a prior agy_execute or agy_continue call."),
     instructions: external_exports.string().describe("Follow-up instructions, corrections, or next steps for the agent."),
-    workspace_dir: external_exports.string().optional().describe("Target workspace directory path."),
+    workspace_dir: external_exports.string().optional().describe("Target workspace directory path (absolute path recommended, especially in Claude Desktop)."),
     effort: external_exports.enum(["low", "medium", "high"]).optional().default("high").describe("Reasoning effort."),
     timeout_seconds: external_exports.number().optional().default(600).describe("Max execution time in seconds."),
     include_git_diff: external_exports.boolean().optional().default(true).describe("Include git status and diff summary.")

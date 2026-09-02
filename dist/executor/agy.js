@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { getGitSummary } from '../utils/git.js';
 // ANSI styling for live terminal output
 const BOLD = '\x1b[1m';
@@ -9,16 +10,20 @@ const GREEN = '\x1b[38;2;80;235;150m';
 const YELLOW = '\x1b[38;2;255;210;70m';
 const PURPLE = '\x1b[38;2;180;120;255m';
 export async function runAgy(options) {
-    const cwd = options.workspaceDir || process.cwd();
+    const cwd = path.resolve(options.workspaceDir || process.cwd());
     const timeoutMs = (options.timeoutSeconds || 600) * 1000;
     const timeoutFlag = `${options.timeoutSeconds || 600}s`;
     const mode = options.mode || 'accept-edits';
     const formattedInstructions = `[AUTONOMOUS EXECUTION MODE]
-You are running as an unattended background worker delegated by Claude Code.
+You are running as an unattended background worker delegated by Claude.
 - Do NOT ask interactive questions, request confirmation, or pause for feedback.
 - Autonomously perform all necessary file reads, edits, creations, and command executions.
 - Verify changes where applicable (e.g. running tests, typechecks, or builds).
 - Conclude with a clear, concise summary of what was completed and verified.
+
+[TARGET WORKSPACE]
+Workspace Directory: ${cwd}
+All project files, edits, creations, and commands must be scoped within this workspace directory.
 
 [TASK INSTRUCTIONS]
 ${options.instructions}`;
@@ -26,6 +31,8 @@ ${options.instructions}`;
         '--print',
         formattedInstructions,
         '--dangerously-skip-permissions',
+        '--add-dir',
+        cwd,
         '--mode',
         mode,
         '--output-format',

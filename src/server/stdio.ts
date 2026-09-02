@@ -12,7 +12,7 @@ const execAsync = promisify(exec)
 
 const server = new McpServer({
   name: 'antigravity-bridge',
-  version: '1.2.0',
+  version: '1.2.1',
 })
 
 // Tool 1: agy_execute
@@ -21,7 +21,7 @@ server.tool(
   'Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks with live streaming progress, thinking token logs, tool tracing, and token savings metrics.',
   {
     instructions: z.string().describe('Detailed step-by-step instructions for agy. Specify target file paths, constraints, test commands, and exact functional requirements.'),
-    workspace_dir: z.string().optional().describe('Target workspace directory path. Defaults to current working directory.'),
+    workspace_dir: z.string().optional().describe('Target workspace directory path (absolute path recommended, especially in Claude Desktop). Defaults to current working directory.'),
     effort: z.enum(['low', 'medium', 'high']).optional().default('high').describe('Reasoning effort (low, medium, high). Default is high.'),
     mode: z.enum(['accept-edits', 'plan']).optional().default('accept-edits').describe('Execution mode: accept-edits (standard autonomous editing) or plan (planning mode).'),
     model: z.string().optional().describe('Optional specific model identifier for agy.'),
@@ -93,7 +93,7 @@ server.tool(
   {
     conversation_id: z.string().describe('The conversation ID returned from a prior agy_execute or agy_continue call.'),
     instructions: z.string().describe('Follow-up instructions, corrections, or next steps for the agent.'),
-    workspace_dir: z.string().optional().describe('Target workspace directory path.'),
+    workspace_dir: z.string().optional().describe('Target workspace directory path (absolute path recommended, especially in Claude Desktop).'),
     effort: z.enum(['low', 'medium', 'high']).optional().default('high').describe('Reasoning effort.'),
     timeout_seconds: z.number().optional().default(600).describe('Max execution time in seconds.'),
     include_git_diff: z.boolean().optional().default(true).describe('Include git status and diff summary.'),
