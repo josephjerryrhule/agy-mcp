@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import os from 'node:os';
 import { getGitSummary } from '../utils/git.js';
 // ANSI styling for live terminal output
 const BOLD = '\x1b[1m';
@@ -9,6 +10,17 @@ const CYAN = '\x1b[38;2;80;220;255m';
 const GREEN = '\x1b[38;2;80;235;150m';
 const YELLOW = '\x1b[38;2;255;210;70m';
 const PURPLE = '\x1b[38;2;180;120;255m';
+export function getEnhancedPath() {
+    const extraPaths = [
+        path.join(os.homedir(), '.local', 'bin'),
+        path.join(os.homedir(), '.gemini', 'antigravity-cli', 'bin'),
+        '/opt/homebrew/bin',
+        '/opt/homebrew/sbin',
+        '/usr/local/bin',
+    ];
+    const currentPath = process.env.PATH || '';
+    return `${extraPaths.join(path.delimiter)}${path.delimiter}${currentPath}`;
+}
 export async function runAgy(options) {
     const cwd = path.resolve(options.workspaceDir || process.cwd());
     const timeoutMs = (options.timeoutSeconds || 600) * 1000;
@@ -56,13 +68,19 @@ ${options.instructions}`;
         let parsedResult = null;
         const executionTrace = [];
         process.stderr.write(`\n${PURPLE}${BOLD}🚀 [Antigravity Worker Initialized]${RESET} ${DIM}in ${cwd}${RESET}\n`);
+        const enhancedPath = getEnhancedPath();
         const proc = spawn('agy', args, {
             cwd,
             env: {
                 ...process.env,
+                PATH: enhancedPath,
                 PAGER: 'cat',
             },
         });
+        // Prevent hanging child process on unclosed stdin
+        if (proc.stdin) {
+            proc.stdin.end();
+        }
         const timer = setTimeout(() => {
             isTimedOut = true;
             proc.kill('SIGTERM');

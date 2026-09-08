@@ -21435,10 +21435,12 @@ var StdioServerTransport = class {
 // src/server/stdio.ts
 import { exec as exec2 } from "node:child_process";
 import { promisify as promisify2 } from "node:util";
+import { randomUUID } from "node:crypto";
 
 // src/executor/agy.ts
 import { spawn } from "node:child_process";
 import path from "node:path";
+import os from "node:os";
 
 // src/utils/git.ts
 import { exec } from "node:child_process";
@@ -21487,6 +21489,17 @@ var CYAN = "\x1B[38;2;80;220;255m";
 var GREEN = "\x1B[38;2;80;235;150m";
 var YELLOW = "\x1B[38;2;255;210;70m";
 var PURPLE = "\x1B[38;2;180;120;255m";
+function getEnhancedPath() {
+  const extraPaths = [
+    path.join(os.homedir(), ".local", "bin"),
+    path.join(os.homedir(), ".gemini", "antigravity-cli", "bin"),
+    "/opt/homebrew/bin",
+    "/opt/homebrew/sbin",
+    "/usr/local/bin"
+  ];
+  const currentPath = process.env.PATH || "";
+  return `${extraPaths.join(path.delimiter)}${path.delimiter}${currentPath}`;
+}
 async function runAgy(options) {
   const cwd = path.resolve(options.workspaceDir || process.cwd());
   const timeoutMs = (options.timeoutSeconds || 600) * 1e3;
@@ -21536,13 +21549,18 @@ ${options.instructions}`;
     process.stderr.write(`
 ${PURPLE}${BOLD}\u{1F680} [Antigravity Worker Initialized]${RESET} ${DIM}in ${cwd}${RESET}
 `);
+    const enhancedPath = getEnhancedPath();
     const proc = spawn("agy", args, {
       cwd,
       env: {
         ...process.env,
+        PATH: enhancedPath,
         PAGER: "cat"
       }
     });
+    if (proc.stdin) {
+      proc.stdin.end();
+    }
     const timer = setTimeout(() => {
       isTimedOut = true;
       proc.kill("SIGTERM");
@@ -21677,9 +21695,9 @@ ${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.resu
 // src/utils/transcript.ts
 import fs from "node:fs/promises";
 import path2 from "node:path";
-import os from "node:os";
+import os2 from "node:os";
 async function inspectTranscript(conversationId, maxSteps = 20) {
-  const homeDir = os.homedir();
+  const homeDir = os2.homedir();
   const transcriptPath = path2.join(
     homeDir,
     ".gemini",
@@ -21739,9 +21757,9 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
 // src/utils/savings.ts
 import fs2 from "node:fs/promises";
 import path3 from "node:path";
-import os2 from "node:os";
+import os3 from "node:os";
 function getStoragePath() {
-  const homeDir = os2.homedir();
+  const homeDir = os3.homedir();
   return path3.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
 }
 async function loadStorage() {
@@ -21810,16 +21828,18 @@ async function getSavingsSummary() {
 
 // src/server/stdio.ts
 var execAsync2 = promisify2(exec2);
+var backgroundTasks = /* @__PURE__ */ new Map();
 var server = new McpServer({
   name: "antigravity-bridge",
-  version: "1.2.1"
+  version: "1.3.0"
 });
 server.tool(
   "agy_execute",
   "Spins up a headless Antigravity (agy) agent to autonomously execute heavy coding, editing, refactoring, research, or testing tasks with live streaming progress, thinking token logs, tool tracing, and token savings metrics.",
   {
     instructions: external_exports.string().describe("Detailed step-by-step instructions for agy. Specify target file paths, constraints, test commands, and exact functional requirements."),
-    workspace_dir: external_exports.string().optional().describe("Target workspace directory path (absolute path recommended, especially in Claude Desktop). Defaults to current working directory."),
+    workspace_dir: external_exports.string().optional().describe("Target workspace directory path (MANDATORY in Claude Desktop to point to the project repo, otherwise agy runs inside Claude desktop internal directory). Defaults to current working directory."),
+    async: external_exports.boolean().optional().default(false).describe("Run task asynchronously in background. RECOMMENDED in Claude Desktop for any real coding tasks (>45s) to prevent Claude Desktop 60-second MCP client timeouts. Check status with agy_check_task."),
     effort: external_exports.enum(["low", "medium", "high"]).optional().default("high").describe("Reasoning effort (low, medium, high). Default is high."),
     mode: external_exports.enum(["accept-edits", "plan"]).optional().default("accept-edits").describe("Execution mode: accept-edits (standard autonomous editing) or plan (planning mode)."),
     model: external_exports.string().optional().describe("Optional specific model identifier for agy."),
@@ -21827,6 +21847,105 @@ server.tool(
     include_git_diff: external_exports.boolean().optional().default(true).describe("Include git status and diff statistics of files modified during execution.")
   },
   async (args) => {
+    if (args.async) {
+      const taskId = randomUUID();
+      const task = {
+        id: taskId,
+        status: "RUNNING",
+        instructions: args.instructions,
+        workspaceDir: args.workspace_dir || process.cwd(),
+        startTime: Date.now(),
+        executionTrace: []
+      };
+      backgroundTasks.set(taskId, task);
+      runAgy({
+        instructions: args.instructions,
+        workspaceDir: args.workspace_dir,
+        effort: args.effort,
+        mode: args.mode,
+        model: args.model,
+        timeoutSeconds: args.timeout_seconds,
+        includeGitDiff: args.include_git_diff,
+        onStreamEvent: (event) => {
+          if (event.event === "step_update" && event.step_update) {
+            const step = event.step_update;
+            if (step.step_type === "agent_response" && step.usage?.thinking_tokens) {
+              task.executionTrace.push({
+                type: "thinking",
+                thinkingTokens: step.usage.thinking_tokens,
+                durationSeconds: step.duration_seconds
+              });
+            } else if (step.step_type === "tool" && step.state === "DONE") {
+              task.executionTrace.push({
+                type: "tool",
+                name: step.tool_name || step.tool_info?.name,
+                durationSeconds: step.duration_seconds
+              });
+            }
+          }
+        }
+      }).then(async (result2) => {
+        task.endTime = Date.now();
+        task.status = result2.success ? "SUCCESS" : result2.status || "FAILED";
+        const totalAgyTokens2 = result2.usage?.total_tokens || 0;
+        const savings2 = await calculateAndRecordSavings(
+          totalAgyTokens2,
+          args.instructions.length,
+          result2.response.length,
+          result2.conversationId
+        );
+        task.result = {
+          success: result2.success,
+          status: result2.status,
+          conversation_id: result2.conversationId,
+          response: result2.response,
+          duration_seconds: result2.durationSeconds,
+          num_turns: result2.numTurns,
+          token_savings_metrics: {
+            tokens_processed_by_antigravity: savings2.tokensProcessedByAntigravity,
+            tokens_ingested_by_claude: savings2.tokensIngestedByClaude,
+            net_tokens_saved_in_claude_context: savings2.tokensSavedInClaudeContext,
+            task_savings_percentage: savings2.savingsPercentage,
+            lifetime_claude_context_saved: savings2.lifetimeClaudeContextSaved,
+            total_tasks_delegated: savings2.totalTasksDelegated
+          },
+          tokens_used_by_agy: result2.usage,
+          execution_trace: result2.executionTrace && result2.executionTrace.length > 0 ? result2.executionTrace : void 0,
+          git_changes: result2.gitChanges?.hasChanges ? {
+            modified: result2.gitChanges.modifiedFiles,
+            untracked: result2.gitChanges.untrackedFiles,
+            diff_stat: result2.gitChanges.diffStat
+          } : "No uncommitted file changes detected in git.",
+          error: result2.error,
+          stderr: result2.rawStderr
+        };
+      }).catch((err) => {
+        task.endTime = Date.now();
+        task.status = "FAILED";
+        task.result = {
+          success: false,
+          status: "ERROR",
+          error: err instanceof Error ? err.message : String(err)
+        };
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                status: "RUNNING",
+                task_id: taskId,
+                message: "Antigravity task launched in background to avoid Claude Desktop 60-second MCP client timeouts. Call agy_check_task with this task_id to check progress or get final results.",
+                workspace_dir: task.workspaceDir
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
     const result = await runAgy({
       instructions: args.instructions,
       workspaceDir: args.workspace_dir,
@@ -21884,12 +22003,112 @@ server.tool(
   {
     conversation_id: external_exports.string().describe("The conversation ID returned from a prior agy_execute or agy_continue call."),
     instructions: external_exports.string().describe("Follow-up instructions, corrections, or next steps for the agent."),
-    workspace_dir: external_exports.string().optional().describe("Target workspace directory path (absolute path recommended, especially in Claude Desktop)."),
+    workspace_dir: external_exports.string().optional().describe("Target workspace directory path (MANDATORY in Claude Desktop to point to the project repo). Defaults to current working directory."),
+    async: external_exports.boolean().optional().default(false).describe("Run task asynchronously in background. RECOMMENDED in Claude Desktop for any real coding tasks (>45s) to avoid 60s MCP client timeouts. Check status with agy_check_task."),
     effort: external_exports.enum(["low", "medium", "high"]).optional().default("high").describe("Reasoning effort."),
     timeout_seconds: external_exports.number().optional().default(600).describe("Max execution time in seconds."),
     include_git_diff: external_exports.boolean().optional().default(true).describe("Include git status and diff summary.")
   },
   async (args) => {
+    if (args.async) {
+      const taskId = randomUUID();
+      const task = {
+        id: taskId,
+        status: "RUNNING",
+        instructions: args.instructions,
+        workspaceDir: args.workspace_dir || process.cwd(),
+        startTime: Date.now(),
+        executionTrace: []
+      };
+      backgroundTasks.set(taskId, task);
+      runAgy({
+        conversationId: args.conversation_id,
+        instructions: args.instructions,
+        workspaceDir: args.workspace_dir,
+        effort: args.effort,
+        timeoutSeconds: args.timeout_seconds,
+        includeGitDiff: args.include_git_diff,
+        onStreamEvent: (event) => {
+          if (event.event === "step_update" && event.step_update) {
+            const step = event.step_update;
+            if (step.step_type === "agent_response" && step.usage?.thinking_tokens) {
+              task.executionTrace.push({
+                type: "thinking",
+                thinkingTokens: step.usage.thinking_tokens,
+                durationSeconds: step.duration_seconds
+              });
+            } else if (step.step_type === "tool" && step.state === "DONE") {
+              task.executionTrace.push({
+                type: "tool",
+                name: step.tool_name || step.tool_info?.name,
+                durationSeconds: step.duration_seconds
+              });
+            }
+          }
+        }
+      }).then(async (result2) => {
+        task.endTime = Date.now();
+        task.status = result2.success ? "SUCCESS" : result2.status || "FAILED";
+        const totalAgyTokens2 = result2.usage?.total_tokens || 0;
+        const savings2 = await calculateAndRecordSavings(
+          totalAgyTokens2,
+          args.instructions.length,
+          result2.response.length,
+          result2.conversationId || args.conversation_id
+        );
+        task.result = {
+          success: result2.success,
+          status: result2.status,
+          conversation_id: result2.conversationId || args.conversation_id,
+          response: result2.response,
+          duration_seconds: result2.durationSeconds,
+          num_turns: result2.numTurns,
+          token_savings_metrics: {
+            tokens_processed_by_antigravity: savings2.tokensProcessedByAntigravity,
+            tokens_ingested_by_claude: savings2.tokensIngestedByClaude,
+            net_tokens_saved_in_claude_context: savings2.tokensSavedInClaudeContext,
+            task_savings_percentage: savings2.savingsPercentage,
+            lifetime_claude_context_saved: savings2.lifetimeClaudeContextSaved,
+            total_tasks_delegated: savings2.totalTasksDelegated
+          },
+          tokens_used_by_agy: result2.usage,
+          execution_trace: result2.executionTrace && result2.executionTrace.length > 0 ? result2.executionTrace : void 0,
+          git_changes: result2.gitChanges?.hasChanges ? {
+            modified: result2.gitChanges.modifiedFiles,
+            untracked: result2.gitChanges.untrackedFiles,
+            diff_stat: result2.gitChanges.diffStat
+          } : "No uncommitted file changes detected in git.",
+          error: result2.error,
+          stderr: result2.rawStderr
+        };
+      }).catch((err) => {
+        task.endTime = Date.now();
+        task.status = "FAILED";
+        task.result = {
+          success: false,
+          status: "ERROR",
+          error: err instanceof Error ? err.message : String(err)
+        };
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                status: "RUNNING",
+                task_id: taskId,
+                conversation_id: args.conversation_id,
+                message: "Antigravity follow-up task launched in background to avoid Claude Desktop 60-second MCP client timeouts. Call agy_check_task with this task_id to check progress or get final results.",
+                workspace_dir: task.workspaceDir
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
     const result = await runAgy({
       conversationId: args.conversation_id,
       instructions: args.instructions,
@@ -21941,6 +22160,70 @@ server.tool(
   }
 );
 server.tool(
+  "agy_check_task",
+  "Checks the status, running duration, execution trace, and results of an asynchronous Antigravity task started with async: true.",
+  {
+    task_id: external_exports.string().describe("The task ID returned from agy_execute or agy_continue when async is true.")
+  },
+  async (args) => {
+    const task = backgroundTasks.get(args.task_id);
+    if (!task) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                error: `Task ID not found: ${args.task_id}`,
+                available_tasks: Array.from(backgroundTasks.keys())
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+    if (task.status === "RUNNING") {
+      const elapsedSeconds = Math.round((Date.now() - task.startTime) / 1e3);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                status: "RUNNING",
+                task_id: task.id,
+                elapsed_seconds: elapsedSeconds,
+                message: `Task is actively executing in background (${elapsedSeconds}s elapsed). Check again shortly.`,
+                recent_trace: task.executionTrace.slice(-5)
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              task_id: task.id,
+              status: task.status,
+              ...task.result
+            },
+            null,
+            2
+          )
+        }
+      ]
+    };
+  }
+);
+server.tool(
   "agy_get_token_savings",
   "Returns lifetime token savings analytics and history of context window saved across all Antigravity delegations.",
   {},
@@ -21981,7 +22264,13 @@ server.tool(
   {},
   async () => {
     try {
-      const { stdout: helpOut } = await execAsync2("agy --help", { timeout: 5e3 });
+      const { stdout: helpOut } = await execAsync2("agy --help", {
+        timeout: 5e3,
+        env: {
+          ...process.env,
+          PATH: getEnhancedPath()
+        }
+      });
       return {
         content: [
           {

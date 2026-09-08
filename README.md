@@ -83,7 +83,8 @@ When working on large repositories, Claude often runs into token limits when per
 ### 1. `agy_execute`
 Spawns a new headless Antigravity subagent with real-time streaming feedback, tool tracing, and token savings analytics.
 - `instructions` *(string, required)*: Step-by-step implementation instructions.
-- `workspace_dir` *(string, optional)*: Working directory (defaults to current project root).
+- `workspace_dir` *(string, optional)*: Working directory (**strongly recommended/mandatory in Claude Desktop** to point to the actual repository path).
+- `async` *(boolean, default: `false`)*: Runs the task asynchronously in the background. **Essential in Claude Desktop** for tasks taking >45 seconds to avoid Claude Desktop's 60-second MCP client timeout.
 - `effort` *(enum: `low` | `medium` | `high`, default: `high`)*: Reasoning effort for Antigravity.
 - `mode` *(enum: `accept-edits` | `plan`, default: `accept-edits`)*: Execution mode.
 - `timeout_seconds` *(number, default: `600`)*: Execution timeout in seconds.
@@ -94,18 +95,23 @@ Sends follow-up instructions, corrections, or test feedback to an existing Antig
 - `conversation_id` *(string, required)*: The conversation ID returned from a prior execution.
 - `instructions` *(string, required)*: Follow-up guidance or bugfix instructions.
 - `workspace_dir` *(string, optional)*
+- `async` *(boolean, default: `false`)*: Run in background to avoid client timeouts.
 - `effort` *(enum: `low` | `medium` | `high`)*
 - `timeout_seconds` *(number, default: `600`)*
 
-### 3. `agy_get_token_savings`
+### 3. `agy_check_task`
+Polls the execution status, running duration, recent trace, and final output of an asynchronous Antigravity task launched with `async: true`.
+- `task_id` *(string, required)*: The task ID returned by `agy_execute` or `agy_continue`.
+
+### 4. `agy_get_token_savings`
 Returns lifetime token savings metrics and delegation history across all sessions.
 
-### 4. `agy_inspect_transcript`
+### 5. `agy_inspect_transcript`
 Inspects recent tool calls and step-by-step actions from an Antigravity conversation log without flooding Claude's context with raw terminal logs.
 - `conversation_id` *(string, required)*
 - `max_steps` *(number, default: `20`)*
 
-### 5. `agy_get_status`
+### 6. `agy_get_status`
 Verifies that the Antigravity CLI is available and operational.
 
 ---
@@ -118,8 +124,8 @@ Add this section to `~/.claude/CLAUDE.md` (or your project's `CLAUDE.md`) so Cla
 ## Antigravity Delegation Guidelines
 - When a task involves reading many files, large multi-file edits, running test suites, or broad exploration:
   1. Do NOT load all files into context.
-  2. Formulate explicit, step-by-step instructions (target file paths, exact schemas, constraints, test commands).
-  3. Invoke `agy_execute` to run the task via Antigravity.
+  2. In Claude Desktop, ALWAYS specify the absolute `workspace_dir` of the target project repository.
+  3. For real coding tasks in Claude Desktop, specify `async: true` on `agy_execute` to prevent the desktop app's 60-second MCP client timeout. Then call `agy_check_task` to retrieve results.
   4. Inspect the returned git changes and response summary.
   5. If fixes are needed, invoke `agy_continue` with the returned `conversation_id`.
 ```
