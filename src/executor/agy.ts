@@ -148,6 +148,26 @@ ${options.instructions}`
       }, 3000)
     }, timeoutMs)
 
+    let isQuotaExhausted = false
+    let quotaErrorReason = ''
+
+    const checkAndHandleQuotaExhaustion = (text: string) => {
+      if (isQuotaExhausted) return
+      const match = text.match(
+        /(?:resource[_\s]exhausted|quota[_\s]exceeded|exceeded.*quota|insufficient.*quota|rate[_\s]limit|too many requests|status[:\s]*429|code[:\s]*429|usage[_\s]limit|credit[_\s]limit|out of credits|insufficient credits|daily.*limit.*reached|capacity exceeded)/i
+      )
+      if (match) {
+        isQuotaExhausted = true
+        quotaErrorReason = text.trim().slice(0, 400)
+        process.stderr.write(`\n\x1b[31m\x1b[1m⛔ [Antigravity Usage/Quota Exhausted]\x1b[0m ${quotaErrorReason}\n`)
+        clearTimeout(timer)
+        proc.kill('SIGTERM')
+        setTimeout(() => {
+          if (!proc.killed) proc.kill('SIGKILL')
+        }, 1000)
+      }
+    }
+
     proc.stdout.on('data', (data) => {
       stdoutBuffer += data.toString()
       const lines = stdoutBuffer.split('\n')
@@ -217,6 +237,9 @@ ${options.instructions}`
             }
           } else if (parsed.event === 'result' && parsed.result) {
             parsedResult = parsed.result
+            if (parsed.result.status === 'ERROR' && parsed.result.error) {
+              checkAndHandleQuotaExhaustion(parsed.result.error)
+            }
             process.stderr.write(
               `\n${GREEN}${BOLD}✨ [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.result.status}, Duration: ${
                 parsed.result.duration_seconds?.toFixed(1) || 0
@@ -224,13 +247,15 @@ ${options.instructions}`
             )
           }
         } catch {
-          // Ignore non-JSON line chunks
+          checkAndHandleQuotaExhaustion(line)
         }
       }
     })
 
     proc.stderr.on('data', (data) => {
-      stderr += data.toString()
+      const chunk = data.toString()
+      stderr += chunk
+      checkAndHandleQuotaExhaustion(chunk)
     })
 
     proc.on('close', async (code) => {
@@ -241,12 +266,28 @@ ${options.instructions}`
         gitChanges = await getGitSummary(cwd)
       }
 
-      if (isTimedOut) {
+      if (isQuotaExhausted) {
         resolve({
           success: false,
-          status: 'TIMEOUT',
+          status: 'USAGE_LIMIT_EXHAUSTED',
           response: '',
-          error: `Task timed out after ${options.timeoutSeconds || 600} seconds`,
+          error: `Antigravity model quota or usage limit has been exhausted: ${quotaErrorReason || '429 Too Many Requests / Resource Exhausted'}. Process terminated immediately to avoid background hanging.`,
+          rawStderr: stderr.slice(-1000),
+          executionTrace,
+          gitChanges,
+        })
+        return
+      }
+
+      if (isTimedOut) {
+        const hasExhaustion = /(?:resource[_\s]exhausted|quota[_\s]exceeded|rate[_\s]limit|429|usage[_\s]limit|credit[_\s]limit)/i.test(stderr)
+        resolve({
+          success: false,
+          status: hasExhaustion ? 'USAGE_LIMIT_EXHAUSTED' : 'TIMEOUT',
+          response: '',
+          error: hasExhaustion
+            ? `Antigravity usage limit was exhausted during execution, causing retry loops that timed out.`
+            : `Task timed out after ${options.timeoutSeconds || 600} seconds`,
           rawStderr: stderr.slice(-1000),
           executionTrace,
           gitChanges,
@@ -255,16 +296,18 @@ ${options.instructions}`
       }
 
       if (parsedResult) {
+        const hasExhaustion = parsedResult.error && /(?:resource[_\s]exhausted|quota[_\s]exceeded|rate[_\s]limit|429|usage[_\s]limit|credit[_\s]limit)/i.test(parsedResult.error)
         resolve({
-          success: parsedResult.status === 'SUCCESS' || code === 0,
+          success: !hasExhaustion && (parsedResult.status === 'SUCCESS' || code === 0),
           conversationId: parsedResult.conversation_id,
-          status: parsedResult.status || (code === 0 ? 'SUCCESS' : 'FAILED'),
+          status: hasExhaustion ? 'USAGE_LIMIT_EXHAUSTED' : (parsedResult.status || (code === 0 ? 'SUCCESS' : 'FAILED')),
           response: parsedResult.response || '',
           durationSeconds: parsedResult.duration_seconds,
           numTurns: parsedResult.num_turns,
           usage: parsedResult.usage,
           executionTrace,
           gitChanges,
+          error: parsedResult.error,
           rawStderr: stderr.trim() ? stderr.slice(-1000) : undefined,
         })
         return

@@ -21568,6 +21568,26 @@ ${PURPLE}${BOLD}\u{1F680} [Antigravity Worker Initialized]${RESET} ${DIM}in ${cw
         if (!proc.killed) proc.kill("SIGKILL");
       }, 3e3);
     }, timeoutMs);
+    let isQuotaExhausted = false;
+    let quotaErrorReason = "";
+    const checkAndHandleQuotaExhaustion = (text) => {
+      if (isQuotaExhausted) return;
+      const match = text.match(
+        /(?:resource[_\s]exhausted|quota[_\s]exceeded|exceeded.*quota|insufficient.*quota|rate[_\s]limit|too many requests|status[:\s]*429|code[:\s]*429|usage[_\s]limit|credit[_\s]limit|out of credits|insufficient credits|daily.*limit.*reached|capacity exceeded)/i
+      );
+      if (match) {
+        isQuotaExhausted = true;
+        quotaErrorReason = text.trim().slice(0, 400);
+        process.stderr.write(`
+\x1B[31m\x1B[1m\u26D4 [Antigravity Usage/Quota Exhausted]\x1B[0m ${quotaErrorReason}
+`);
+        clearTimeout(timer);
+        proc.kill("SIGTERM");
+        setTimeout(() => {
+          if (!proc.killed) proc.kill("SIGKILL");
+        }, 1e3);
+      }
+    };
     proc.stdout.on("data", (data) => {
       stdoutBuffer += data.toString();
       const lines = stdoutBuffer.split("\n");
@@ -21624,6 +21644,9 @@ ${PURPLE}${BOLD}\u{1F680} [Antigravity Worker Initialized]${RESET} ${DIM}in ${cw
             }
           } else if (parsed.event === "result" && parsed.result) {
             parsedResult = parsed.result;
+            if (parsed.result.status === "ERROR" && parsed.result.error) {
+              checkAndHandleQuotaExhaustion(parsed.result.error);
+            }
             process.stderr.write(
               `
 ${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.result.status}, Duration: ${parsed.result.duration_seconds?.toFixed(1) || 0}s${RESET}
@@ -21631,11 +21654,14 @@ ${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.resu
             );
           }
         } catch {
+          checkAndHandleQuotaExhaustion(line);
         }
       }
     });
     proc.stderr.on("data", (data) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
+      checkAndHandleQuotaExhaustion(chunk);
     });
     proc.on("close", async (code) => {
       clearTimeout(timer);
@@ -21643,12 +21669,25 @@ ${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.resu
       if (options.includeGitDiff !== false) {
         gitChanges = await getGitSummary(cwd);
       }
-      if (isTimedOut) {
+      if (isQuotaExhausted) {
         resolve({
           success: false,
-          status: "TIMEOUT",
+          status: "USAGE_LIMIT_EXHAUSTED",
           response: "",
-          error: `Task timed out after ${options.timeoutSeconds || 600} seconds`,
+          error: `Antigravity model quota or usage limit has been exhausted: ${quotaErrorReason || "429 Too Many Requests / Resource Exhausted"}. Process terminated immediately to avoid background hanging.`,
+          rawStderr: stderr.slice(-1e3),
+          executionTrace,
+          gitChanges
+        });
+        return;
+      }
+      if (isTimedOut) {
+        const hasExhaustion = /(?:resource[_\s]exhausted|quota[_\s]exceeded|rate[_\s]limit|429|usage[_\s]limit|credit[_\s]limit)/i.test(stderr);
+        resolve({
+          success: false,
+          status: hasExhaustion ? "USAGE_LIMIT_EXHAUSTED" : "TIMEOUT",
+          response: "",
+          error: hasExhaustion ? `Antigravity usage limit was exhausted during execution, causing retry loops that timed out.` : `Task timed out after ${options.timeoutSeconds || 600} seconds`,
           rawStderr: stderr.slice(-1e3),
           executionTrace,
           gitChanges
@@ -21656,16 +21695,18 @@ ${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.resu
         return;
       }
       if (parsedResult) {
+        const hasExhaustion = parsedResult.error && /(?:resource[_\s]exhausted|quota[_\s]exceeded|rate[_\s]limit|429|usage[_\s]limit|credit[_\s]limit)/i.test(parsedResult.error);
         resolve({
-          success: parsedResult.status === "SUCCESS" || code === 0,
+          success: !hasExhaustion && (parsedResult.status === "SUCCESS" || code === 0),
           conversationId: parsedResult.conversation_id,
-          status: parsedResult.status || (code === 0 ? "SUCCESS" : "FAILED"),
+          status: hasExhaustion ? "USAGE_LIMIT_EXHAUSTED" : parsedResult.status || (code === 0 ? "SUCCESS" : "FAILED"),
           response: parsedResult.response || "",
           durationSeconds: parsedResult.duration_seconds,
           numTurns: parsedResult.num_turns,
           usage: parsedResult.usage,
           executionTrace,
           gitChanges,
+          error: parsedResult.error,
           rawStderr: stderr.trim() ? stderr.slice(-1e3) : void 0
         });
         return;
@@ -21829,9 +21870,37 @@ async function getSavingsSummary() {
 // src/server/stdio.ts
 var execAsync2 = promisify2(exec2);
 var backgroundTasks = /* @__PURE__ */ new Map();
+function formatPayload(result, savings, customConversationId) {
+  return {
+    success: result.success,
+    status: result.status,
+    conversation_id: result.conversationId || customConversationId,
+    response: result.response,
+    duration_seconds: result.durationSeconds,
+    num_turns: result.numTurns,
+    token_savings_metrics: {
+      tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
+      tokens_ingested_by_claude: savings.tokensIngestedByClaude,
+      net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
+      task_savings_percentage: savings.savingsPercentage,
+      lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
+      total_tasks_delegated: savings.totalTasksDelegated
+    },
+    tokens_used_by_agy: result.usage,
+    usage_limit_alert: result.status === "USAGE_LIMIT_EXHAUSTED" ? "\u26D4 ANTIGRAVITY USAGE LIMIT EXHAUSTED: Antigravity/Gemini model quota or account usage limit is exhausted (429 / Resource Exhausted). Do NOT retry or spawn Claude subagents without explicit user authorization." : void 0,
+    execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : void 0,
+    git_changes: result.gitChanges?.hasChanges ? {
+      modified: result.gitChanges.modifiedFiles,
+      untracked: result.gitChanges.untrackedFiles,
+      diff_stat: result.gitChanges.diffStat
+    } : "No uncommitted file changes detected in git.",
+    error: result.error,
+    stderr: result.rawStderr
+  };
+}
 var server = new McpServer({
   name: "antigravity-bridge",
-  version: "1.3.0"
+  version: "1.3.1"
 });
 server.tool(
   "agy_execute",
@@ -21894,31 +21963,7 @@ server.tool(
           result2.response.length,
           result2.conversationId
         );
-        task.result = {
-          success: result2.success,
-          status: result2.status,
-          conversation_id: result2.conversationId,
-          response: result2.response,
-          duration_seconds: result2.durationSeconds,
-          num_turns: result2.numTurns,
-          token_savings_metrics: {
-            tokens_processed_by_antigravity: savings2.tokensProcessedByAntigravity,
-            tokens_ingested_by_claude: savings2.tokensIngestedByClaude,
-            net_tokens_saved_in_claude_context: savings2.tokensSavedInClaudeContext,
-            task_savings_percentage: savings2.savingsPercentage,
-            lifetime_claude_context_saved: savings2.lifetimeClaudeContextSaved,
-            total_tasks_delegated: savings2.totalTasksDelegated
-          },
-          tokens_used_by_agy: result2.usage,
-          execution_trace: result2.executionTrace && result2.executionTrace.length > 0 ? result2.executionTrace : void 0,
-          git_changes: result2.gitChanges?.hasChanges ? {
-            modified: result2.gitChanges.modifiedFiles,
-            untracked: result2.gitChanges.untrackedFiles,
-            diff_stat: result2.gitChanges.diffStat
-          } : "No uncommitted file changes detected in git.",
-          error: result2.error,
-          stderr: result2.rawStderr
-        };
+        task.result = formatPayload(result2, savings2);
       }).catch((err) => {
         task.endTime = Date.now();
         task.status = "FAILED";
@@ -21962,31 +22007,7 @@ server.tool(
       result.response.length,
       result.conversationId
     );
-    const payload = {
-      success: result.success,
-      status: result.status,
-      conversation_id: result.conversationId,
-      response: result.response,
-      duration_seconds: result.durationSeconds,
-      num_turns: result.numTurns,
-      token_savings_metrics: {
-        tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
-        tokens_ingested_by_claude: savings.tokensIngestedByClaude,
-        net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
-        task_savings_percentage: savings.savingsPercentage,
-        lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
-        total_tasks_delegated: savings.totalTasksDelegated
-      },
-      tokens_used_by_agy: result.usage,
-      execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : void 0,
-      git_changes: result.gitChanges?.hasChanges ? {
-        modified: result.gitChanges.modifiedFiles,
-        untracked: result.gitChanges.untrackedFiles,
-        diff_stat: result.gitChanges.diffStat
-      } : "No uncommitted file changes detected in git.",
-      error: result.error,
-      stderr: result.rawStderr
-    };
+    const payload = formatPayload(result, savings);
     return {
       content: [
         {
@@ -22056,31 +22077,7 @@ server.tool(
           result2.response.length,
           result2.conversationId || args.conversation_id
         );
-        task.result = {
-          success: result2.success,
-          status: result2.status,
-          conversation_id: result2.conversationId || args.conversation_id,
-          response: result2.response,
-          duration_seconds: result2.durationSeconds,
-          num_turns: result2.numTurns,
-          token_savings_metrics: {
-            tokens_processed_by_antigravity: savings2.tokensProcessedByAntigravity,
-            tokens_ingested_by_claude: savings2.tokensIngestedByClaude,
-            net_tokens_saved_in_claude_context: savings2.tokensSavedInClaudeContext,
-            task_savings_percentage: savings2.savingsPercentage,
-            lifetime_claude_context_saved: savings2.lifetimeClaudeContextSaved,
-            total_tasks_delegated: savings2.totalTasksDelegated
-          },
-          tokens_used_by_agy: result2.usage,
-          execution_trace: result2.executionTrace && result2.executionTrace.length > 0 ? result2.executionTrace : void 0,
-          git_changes: result2.gitChanges?.hasChanges ? {
-            modified: result2.gitChanges.modifiedFiles,
-            untracked: result2.gitChanges.untrackedFiles,
-            diff_stat: result2.gitChanges.diffStat
-          } : "No uncommitted file changes detected in git.",
-          error: result2.error,
-          stderr: result2.rawStderr
-        };
+        task.result = formatPayload(result2, savings2, args.conversation_id);
       }).catch((err) => {
         task.endTime = Date.now();
         task.status = "FAILED";
@@ -22124,31 +22121,7 @@ server.tool(
       result.response.length,
       result.conversationId || args.conversation_id
     );
-    const payload = {
-      success: result.success,
-      status: result.status,
-      conversation_id: result.conversationId || args.conversation_id,
-      response: result.response,
-      duration_seconds: result.durationSeconds,
-      num_turns: result.numTurns,
-      token_savings_metrics: {
-        tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
-        tokens_ingested_by_claude: savings.tokensIngestedByClaude,
-        net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
-        task_savings_percentage: savings.savingsPercentage,
-        lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
-        total_tasks_delegated: savings.totalTasksDelegated
-      },
-      tokens_used_by_agy: result.usage,
-      execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : void 0,
-      git_changes: result.gitChanges?.hasChanges ? {
-        modified: result.gitChanges.modifiedFiles,
-        untracked: result.gitChanges.untrackedFiles,
-        diff_stat: result.gitChanges.diffStat
-      } : "No uncommitted file changes detected in git.",
-      error: result.error,
-      stderr: result.rawStderr
-    };
+    const payload = formatPayload(result, savings, args.conversation_id);
     return {
       content: [
         {

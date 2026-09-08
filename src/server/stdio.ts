@@ -24,9 +24,43 @@ interface BackgroundTask {
 
 const backgroundTasks = new Map<string, BackgroundTask>()
 
+function formatPayload(result: any, savings: any, customConversationId?: string) {
+  return {
+    success: result.success,
+    status: result.status,
+    conversation_id: result.conversationId || customConversationId,
+    response: result.response,
+    duration_seconds: result.durationSeconds,
+    num_turns: result.numTurns,
+    token_savings_metrics: {
+      tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
+      tokens_ingested_by_claude: savings.tokensIngestedByClaude,
+      net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
+      task_savings_percentage: savings.savingsPercentage,
+      lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
+      total_tasks_delegated: savings.totalTasksDelegated,
+    },
+    tokens_used_by_agy: result.usage,
+    usage_limit_alert:
+      result.status === 'USAGE_LIMIT_EXHAUSTED'
+        ? '⛔ ANTIGRAVITY USAGE LIMIT EXHAUSTED: Antigravity/Gemini model quota or account usage limit is exhausted (429 / Resource Exhausted). Do NOT retry or spawn Claude subagents without explicit user authorization.'
+        : undefined,
+    execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : undefined,
+    git_changes: result.gitChanges?.hasChanges
+      ? {
+          modified: result.gitChanges.modifiedFiles,
+          untracked: result.gitChanges.untrackedFiles,
+          diff_stat: result.gitChanges.diffStat,
+        }
+      : 'No uncommitted file changes detected in git.',
+    error: result.error,
+    stderr: result.rawStderr,
+  }
+}
+
 const server = new McpServer({
   name: 'antigravity-bridge',
-  version: '1.3.0',
+  version: '1.3.1',
 })
 
 // Tool 1: agy_execute
@@ -94,33 +128,7 @@ server.tool(
             result.conversationId
           )
 
-          task.result = {
-            success: result.success,
-            status: result.status,
-            conversation_id: result.conversationId,
-            response: result.response,
-            duration_seconds: result.durationSeconds,
-            num_turns: result.numTurns,
-            token_savings_metrics: {
-              tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
-              tokens_ingested_by_claude: savings.tokensIngestedByClaude,
-              net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
-              task_savings_percentage: savings.savingsPercentage,
-              lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
-              total_tasks_delegated: savings.totalTasksDelegated,
-            },
-            tokens_used_by_agy: result.usage,
-            execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : undefined,
-            git_changes: result.gitChanges?.hasChanges
-              ? {
-                  modified: result.gitChanges.modifiedFiles,
-                  untracked: result.gitChanges.untrackedFiles,
-                  diff_stat: result.gitChanges.diffStat,
-                }
-              : 'No uncommitted file changes detected in git.',
-            error: result.error,
-            stderr: result.rawStderr,
-          }
+          task.result = formatPayload(result, savings)
         })
         .catch((err) => {
           task.endTime = Date.now()
@@ -169,33 +177,7 @@ server.tool(
       result.conversationId
     )
 
-    const payload = {
-      success: result.success,
-      status: result.status,
-      conversation_id: result.conversationId,
-      response: result.response,
-      duration_seconds: result.durationSeconds,
-      num_turns: result.numTurns,
-      token_savings_metrics: {
-        tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
-        tokens_ingested_by_claude: savings.tokensIngestedByClaude,
-        net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
-        task_savings_percentage: savings.savingsPercentage,
-        lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
-        total_tasks_delegated: savings.totalTasksDelegated,
-      },
-      tokens_used_by_agy: result.usage,
-      execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : undefined,
-      git_changes: result.gitChanges?.hasChanges
-        ? {
-            modified: result.gitChanges.modifiedFiles,
-            untracked: result.gitChanges.untrackedFiles,
-            diff_stat: result.gitChanges.diffStat,
-          }
-        : 'No uncommitted file changes detected in git.',
-      error: result.error,
-      stderr: result.rawStderr,
-    }
+    const payload = formatPayload(result, savings)
 
     return {
       content: [
@@ -271,33 +253,7 @@ server.tool(
             result.conversationId || args.conversation_id
           )
 
-          task.result = {
-            success: result.success,
-            status: result.status,
-            conversation_id: result.conversationId || args.conversation_id,
-            response: result.response,
-            duration_seconds: result.durationSeconds,
-            num_turns: result.numTurns,
-            token_savings_metrics: {
-              tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
-              tokens_ingested_by_claude: savings.tokensIngestedByClaude,
-              net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
-              task_savings_percentage: savings.savingsPercentage,
-              lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
-              total_tasks_delegated: savings.totalTasksDelegated,
-            },
-            tokens_used_by_agy: result.usage,
-            execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : undefined,
-            git_changes: result.gitChanges?.hasChanges
-              ? {
-                  modified: result.gitChanges.modifiedFiles,
-                  untracked: result.gitChanges.untrackedFiles,
-                  diff_stat: result.gitChanges.diffStat,
-                }
-              : 'No uncommitted file changes detected in git.',
-            error: result.error,
-            stderr: result.rawStderr,
-          }
+          task.result = formatPayload(result, savings, args.conversation_id)
         })
         .catch((err) => {
           task.endTime = Date.now()
@@ -346,33 +302,7 @@ server.tool(
       result.conversationId || args.conversation_id
     )
 
-    const payload = {
-      success: result.success,
-      status: result.status,
-      conversation_id: result.conversationId || args.conversation_id,
-      response: result.response,
-      duration_seconds: result.durationSeconds,
-      num_turns: result.numTurns,
-      token_savings_metrics: {
-        tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
-        tokens_ingested_by_claude: savings.tokensIngestedByClaude,
-        net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
-        task_savings_percentage: savings.savingsPercentage,
-        lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
-        total_tasks_delegated: savings.totalTasksDelegated,
-      },
-      tokens_used_by_agy: result.usage,
-      execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : undefined,
-      git_changes: result.gitChanges?.hasChanges
-        ? {
-            modified: result.gitChanges.modifiedFiles,
-            untracked: result.gitChanges.untrackedFiles,
-            diff_stat: result.gitChanges.diffStat,
-          }
-        : 'No uncommitted file changes detected in git.',
-      error: result.error,
-      stderr: result.rawStderr,
-    }
+    const payload = formatPayload(result, savings, args.conversation_id)
 
     return {
       content: [
