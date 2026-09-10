@@ -1,6 +1,7 @@
 import os from 'node:os'
 import path from 'node:path'
 import fs from 'node:fs/promises'
+import { runCodex } from './codex.js'
 
 export interface ChatgptConsultOptions {
   prompt: string
@@ -63,12 +64,37 @@ export async function resolveOpenAiApiKey(): Promise<string | null> {
 export async function runChatgptConsult(options: ChatgptConsultOptions): Promise<ChatgptConsultResult> {
   const apiKey = await resolveOpenAiApiKey()
   if (!apiKey) {
+    // Route through the user's authenticated ChatGPT session via Codex CLI
+    const directive = options.systemPrompt
+      ? `${options.systemPrompt}\n\n`
+      : 'You are an expert technical advisor and copy strategist. Provide engaging, natural, and compelling output.\n\n'
+    const contextBlock = options.context ? `[CONTEXT / REFERENCE]\n${options.context}\n\n` : ''
+    const fullInstructions = `${directive}${contextBlock}[REQUEST]\n${options.prompt}`
+
+    const codexResult = await runCodex({
+      instructions: fullInstructions,
+      model:
+        options.model && (options.model.startsWith('gpt-5') || options.model.startsWith('codex'))
+          ? options.model
+          : 'gpt-5.6-luna',
+      timeoutSeconds: 300,
+      includeGitDiff: false,
+    })
+
     return {
-      success: false,
-      response: '',
-      model: options.model || 'o3-mini',
-      error:
-        'OpenAI API Key not found. Please set OPENAI_API_KEY in your environment or in Claude Desktop / Claude Code mcpServers env configuration.',
+      success: codexResult.success,
+      response: codexResult.response,
+      model: `chatgpt (${options.model || 'gpt-5.6-luna'})`,
+      durationSeconds: codexResult.durationSeconds,
+      usage: codexResult.usage
+        ? {
+            total_tokens: codexResult.usage.total_tokens,
+            prompt_tokens: codexResult.usage.input_tokens,
+            completion_tokens: codexResult.usage.output_tokens,
+            reasoning_tokens: codexResult.usage.reasoning_output_tokens,
+          }
+        : undefined,
+      error: codexResult.error,
     }
   }
 
