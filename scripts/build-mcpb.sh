@@ -21,7 +21,7 @@ cat << 'MANIFEST' > build/tmp-mcpb/manifest.json
   "manifest_version": "0.2",
   "name": "agy-mcp",
   "display_name": "Antigravity Bridge",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Enables Claude to delegate heavy coding, multi-file editing, test runs, and repository operations to Antigravity (agy) headless subagents with live streaming and token savings tracking.",
   "author": {
     "name": "Joseph Jerry Rhule"

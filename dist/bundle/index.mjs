@@ -3259,8 +3259,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path4) {
-      let input = path4;
+    function removeDotSegments(path6) {
+      let input = path6;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3669,8 +3669,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path4 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path4 && path4 !== "/" ? path4 : void 0;
+        const path6 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path6 && path6 !== "/" ? path6 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -7182,12 +7182,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs3, exportName) {
+    function addFormats(ajv, list, fs5, exportName) {
       var _a;
       var _b;
       (_a = (_b = ajv.opts.code).formats) !== null && _a !== void 0 ? _a : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs3[f]);
+        ajv.addFormat(f, fs5[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7673,8 +7673,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path4, errorMaps, issueData } = params;
-  const fullPath = [...path4, ...issueData.path || []];
+  const { data, path: path6, errorMaps, issueData } = params;
+  const fullPath = [...path6, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7790,11 +7790,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path4, key) {
+  constructor(parent, value, path6, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path4;
+    this._path = path6;
     this._key = key;
   }
   get path() {
@@ -11432,10 +11432,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path6) {
+  if (!path6)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path6.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11755,11 +11755,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path6, issues) {
   return issues.map((iss) => {
     var _a;
     (_a = iss).path ?? (_a.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path6);
     return iss;
   });
 }
@@ -15172,11 +15172,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path4) {
-  if (path4.length === 0) {
+function getDotPath(path6) {
+  if (path6.length === 0) {
     return "object root";
   }
-  return path4.reduce((acc, seg, index) => {
+  return path6.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -21435,7 +21435,7 @@ var StdioServerTransport = class {
 // src/server/stdio.ts
 import { exec as exec2 } from "node:child_process";
 import { promisify as promisify2 } from "node:util";
-import { randomUUID } from "node:crypto";
+import { randomUUID as randomUUID2 } from "node:crypto";
 
 // src/executor/agy.ts
 import { spawn } from "node:child_process";
@@ -21733,13 +21733,438 @@ ${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.resu
   });
 }
 
-// src/utils/transcript.ts
-import fs from "node:fs/promises";
+// src/executor/codex.ts
+import { spawn as spawn2 } from "node:child_process";
 import path2 from "node:path";
 import os2 from "node:os";
+import fs from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+var BOLD2 = "\x1B[1m";
+var DIM2 = "\x1B[2m";
+var RESET2 = "\x1B[0m";
+var CYAN2 = "\x1B[38;2;80;220;255m";
+var GREEN2 = "\x1B[38;2;80;235;150m";
+var YELLOW2 = "\x1B[38;2;255;210;70m";
+var ORANGE = "\x1B[38;2;255;160;70m";
+function getEnhancedPath2() {
+  const extraPaths = [
+    path2.join(os2.homedir(), ".local", "bin"),
+    path2.join(os2.homedir(), ".gemini", "antigravity-cli", "bin"),
+    "/opt/homebrew/bin",
+    "/opt/homebrew/sbin",
+    "/usr/local/bin"
+  ];
+  const currentPath = process.env.PATH || "";
+  return `${extraPaths.join(path2.delimiter)}${path2.delimiter}${currentPath}`;
+}
+async function runCodex(options) {
+  const cwd = path2.resolve(options.workspaceDir || process.cwd());
+  const timeoutMs = (options.timeoutSeconds || 600) * 1e3;
+  const startTime = Date.now();
+  const tempOutputFile = path2.join(os2.tmpdir(), `codex-out-${randomUUID()}.txt`);
+  const formattedInstructions = `[AUTONOMOUS EXECUTION MODE]
+You are running as an unattended background worker delegated by Claude.
+- Do NOT ask interactive questions, request confirmation, or pause for feedback.
+- Autonomously perform all necessary file reads, edits, creations, and command executions.
+- Verify changes where applicable (e.g. running tests, typechecks, or builds).
+- Conclude with a clear, concise summary of what was completed and verified.
+
+[TARGET WORKSPACE]
+Workspace Directory: ${cwd}
+All project files, edits, creations, and commands must be scoped within this workspace directory.
+
+[TASK INSTRUCTIONS]
+${options.instructions}`;
+  const modelToUse = options.model || "gpt-5.6-luna";
+  const args = [];
+  if (options.threadId) {
+    args.push(
+      "exec",
+      "resume",
+      "--json",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "-m",
+      modelToUse
+    );
+    if (options.reasoningEffort) {
+      args.push("-c", `model_reasoning_effort="${options.reasoningEffort}"`);
+    }
+    args.push("-o", tempOutputFile);
+    args.push(options.threadId);
+    args.push(options.instructions);
+  } else {
+    args.push(
+      "exec",
+      "--json",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "-C",
+      cwd,
+      "-m",
+      modelToUse
+    );
+    if (options.reasoningEffort) {
+      args.push("-c", `model_reasoning_effort="${options.reasoningEffort}"`);
+    }
+    if (options.sandbox) {
+      args.push("-s", options.sandbox);
+    }
+    args.push("-o", tempOutputFile);
+    args.push(formattedInstructions);
+  }
+  return new Promise((resolve) => {
+    let stdoutBuffer = "";
+    let stderr = "";
+    let isTimedOut = false;
+    let isQuotaExhausted = false;
+    let quotaErrorReason = "";
+    let threadId = options.threadId;
+    let accumulatedResponse = "";
+    let usage;
+    let numTurns = 0;
+    const executionTrace = [];
+    process.stderr.write(
+      `
+${ORANGE}${BOLD2}\u{1F680} [Codex Worker Initialized]${RESET2} ${DIM2}in ${cwd} (model: ${modelToUse})${RESET2}
+`
+    );
+    const enhancedPath = getEnhancedPath2();
+    const proc = spawn2("codex", args, {
+      cwd,
+      env: {
+        ...process.env,
+        PATH: enhancedPath,
+        PAGER: "cat"
+      }
+    });
+    if (proc.stdin) {
+      proc.stdin.end();
+    }
+    const timer = setTimeout(() => {
+      isTimedOut = true;
+      proc.kill("SIGTERM");
+      setTimeout(() => {
+        if (!proc.killed) proc.kill("SIGKILL");
+      }, 3e3);
+    }, timeoutMs);
+    const checkAndHandleQuotaExhaustion = (text) => {
+      if (isQuotaExhausted) return;
+      const match = text.match(
+        /(?:resource[_\s]exhausted|quota[_\s]exceeded|exceeded.*quota|insufficient.*quota|rate[_\s]limit|too many requests|status[:\s]*429|code[:\s]*429|usage[_\s]limit|credit[_\s]limit|out of credits|insufficient credits|daily.*limit.*reached|capacity exceeded)/i
+      );
+      if (match) {
+        isQuotaExhausted = true;
+        quotaErrorReason = text.trim().slice(0, 400);
+        process.stderr.write(`
+\x1B[31m\x1B[1m\u26D4 [Codex Usage/Quota Exhausted]\x1B[0m ${quotaErrorReason}
+`);
+        clearTimeout(timer);
+        proc.kill("SIGTERM");
+        setTimeout(() => {
+          if (!proc.killed) proc.kill("SIGKILL");
+        }, 1e3);
+      }
+    };
+    proc.stdout.on("data", (data) => {
+      stdoutBuffer += data.toString();
+      const lines = stdoutBuffer.split("\n");
+      stdoutBuffer = lines.pop() || "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (options.onStreamEvent) {
+            options.onStreamEvent(parsed);
+          }
+          if (parsed.type === "thread.started" && parsed.thread_id) {
+            threadId = parsed.thread_id;
+            process.stderr.write(`${CYAN2}\u{1F9F5} [Codex Thread: ${threadId}]${RESET2}
+`);
+          } else if (parsed.type === "turn.started") {
+            numTurns += 1;
+          } else if (parsed.type === "turn.completed" && parsed.usage) {
+            const u = parsed.usage;
+            usage = {
+              input_tokens: u.input_tokens,
+              output_tokens: u.output_tokens,
+              reasoning_output_tokens: u.reasoning_output_tokens,
+              cached_input_tokens: u.cached_input_tokens,
+              total_tokens: (u.input_tokens || 0) + (u.output_tokens || 0)
+            };
+          } else if (parsed.type === "item.completed" && parsed.item) {
+            const item = parsed.item;
+            if (item.type === "agent_message" && item.text) {
+              accumulatedResponse = item.text;
+              process.stderr.write(`${DIM2}${item.text}${RESET2}
+`);
+            } else if (item.type === "tool" || item.type === "command_execution") {
+              const toolName = item.name || item.tool || item.command || "tool_call";
+              process.stderr.write(`${YELLOW2}\u26A1 [Codex Action: ${toolName}]${RESET2}
+`);
+              executionTrace.push({
+                stepIndex: executionTrace.length,
+                type: "tool",
+                name: toolName,
+                details: item.args ? JSON.stringify(item.args) : void 0
+              });
+            }
+          } else if (parsed.type === "error" && parsed.message) {
+            checkAndHandleQuotaExhaustion(parsed.message);
+          }
+        } catch {
+          checkAndHandleQuotaExhaustion(trimmed);
+        }
+      }
+    });
+    proc.stderr.on("data", (data) => {
+      const chunk = data.toString();
+      stderr += chunk;
+      checkAndHandleQuotaExhaustion(chunk);
+    });
+    proc.on("close", async (code) => {
+      clearTimeout(timer);
+      const durationSeconds = Math.round((Date.now() - startTime) / 100) / 10;
+      let finalResponse = accumulatedResponse;
+      try {
+        const fileContent = await fs.readFile(tempOutputFile, "utf-8");
+        if (fileContent.trim()) {
+          finalResponse = fileContent.trim();
+        }
+      } catch {
+      } finally {
+        await fs.unlink(tempOutputFile).catch(() => {
+        });
+      }
+      let gitChanges;
+      if (options.includeGitDiff !== false) {
+        gitChanges = await getGitSummary(cwd);
+      }
+      if (isQuotaExhausted) {
+        resolve({
+          success: false,
+          threadId,
+          status: "USAGE_LIMIT_EXHAUSTED",
+          response: "",
+          durationSeconds,
+          numTurns,
+          usage,
+          error: `Codex model quota or usage limit was exhausted: ${quotaErrorReason || "Rate limit / quota exceeded"}. Process terminated.`,
+          rawStderr: stderr.slice(-1e3),
+          executionTrace,
+          gitChanges
+        });
+        return;
+      }
+      if (isTimedOut) {
+        resolve({
+          success: false,
+          threadId,
+          status: "TIMEOUT",
+          response: finalResponse,
+          durationSeconds,
+          numTurns,
+          usage,
+          error: `Codex task timed out after ${options.timeoutSeconds || 600} seconds`,
+          rawStderr: stderr.slice(-1e3),
+          executionTrace,
+          gitChanges
+        });
+        return;
+      }
+      const success = code === 0;
+      process.stderr.write(
+        `
+${GREEN2}${BOLD2}\u2728 [Codex Finished]${RESET2} ${DIM2}Status: ${success ? "SUCCESS" : "FAILED"}, Duration: ${durationSeconds}s${RESET2}
+`
+      );
+      resolve({
+        success,
+        threadId,
+        status: success ? "SUCCESS" : "FAILED",
+        response: finalResponse || (success ? "(Task completed with no final text)" : "Codex execution failed"),
+        durationSeconds,
+        numTurns,
+        usage,
+        executionTrace,
+        gitChanges,
+        error: !success ? `Process exited with code ${code}${stderr ? `: ${stderr.slice(-300)}` : ""}` : void 0,
+        rawStderr: stderr.trim() ? stderr.slice(-1e3) : void 0
+      });
+    });
+    proc.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({
+        success: false,
+        status: "SPAWN_ERROR",
+        response: "",
+        error: `Failed to spawn codex process: ${err.message}`
+      });
+    });
+  });
+}
+
+// src/executor/chatgpt.ts
+import os3 from "node:os";
+import path3 from "node:path";
+import fs2 from "node:fs/promises";
+var BOLD3 = "\x1B[1m";
+var DIM3 = "\x1B[2m";
+var RESET3 = "\x1B[0m";
+var GREEN3 = "\x1B[38;2;80;235;150m";
+var BLUE = "\x1B[38;2;90;170;255m";
+async function resolveOpenAiApiKey() {
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
+    return process.env.OPENAI_API_KEY.trim();
+  }
+  try {
+    const authPath = path3.join(os3.homedir(), ".codex", "auth.json");
+    const raw = await fs2.readFile(authPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.OPENAI_API_KEY === "string" && parsed.OPENAI_API_KEY.trim()) {
+      return parsed.OPENAI_API_KEY.trim();
+    }
+  } catch {
+  }
+  return null;
+}
+async function runChatgptConsult(options) {
+  const apiKey = await resolveOpenAiApiKey();
+  if (!apiKey) {
+    return {
+      success: false,
+      response: "",
+      model: options.model || "o3-mini",
+      error: "OpenAI API Key not found. Please set OPENAI_API_KEY in your environment or in Claude Desktop / Claude Code mcpServers env configuration."
+    };
+  }
+  const model = options.model || "o3-mini";
+  const isReasoningModel = model.startsWith("o1") || model.startsWith("o3") || model.includes("reasoning");
+  const messages = [];
+  const systemContent = options.systemPrompt || "You are an expert technical advisor and architecture consultant. Provide rigorous, actionable, and precise analysis.";
+  if (!isReasoningModel) {
+    messages.push({ role: "system", content: systemContent });
+  }
+  let userPrompt = options.prompt;
+  if (options.context) {
+    userPrompt = `[CONTEXT / REFERENCE]
+${options.context}
+
+[QUERY / INSTRUCTION]
+${options.prompt}`;
+  }
+  if (isReasoningModel) {
+    userPrompt = `[DIRECTIVE]
+${systemContent}
+
+${userPrompt}`;
+  }
+  messages.push({ role: "user", content: userPrompt });
+  const requestBody = {
+    model,
+    messages
+  };
+  if (isReasoningModel && options.reasoningEffort) {
+    requestBody.reasoning_effort = options.reasoningEffort;
+  } else if (!isReasoningModel && typeof options.temperature === "number") {
+    requestBody.temperature = options.temperature;
+  }
+  const startTime = Date.now();
+  process.stderr.write(`
+${BLUE}${BOLD3}\u{1F4AC} [ChatGPT Consulting Initialized]${RESET3} ${DIM3}model: ${model}${RESET3}
+`);
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+    const durationSeconds = Math.round((Date.now() - startTime) / 100) / 10;
+    if (!res.ok) {
+      const errText = await res.text();
+      let errMsg = `OpenAI API returned status ${res.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.error?.message) {
+          errMsg = errJson.error.message;
+        }
+      } catch {
+        errMsg += `: ${errText.slice(0, 300)}`;
+      }
+      return {
+        success: false,
+        response: "",
+        model,
+        durationSeconds,
+        error: errMsg
+      };
+    }
+    const json = await res.json();
+    const choice = json.choices?.[0];
+    const content = choice?.message?.content || "(No response content)";
+    const rawUsage = json.usage;
+    const usage = rawUsage ? {
+      prompt_tokens: rawUsage.prompt_tokens,
+      completion_tokens: rawUsage.completion_tokens,
+      reasoning_tokens: rawUsage.completion_tokens_details?.reasoning_tokens,
+      total_tokens: rawUsage.total_tokens
+    } : {};
+    process.stderr.write(
+      `
+${GREEN3}${BOLD3}\u2728 [ChatGPT Response Received]${RESET3} ${DIM3}Duration: ${durationSeconds}s, Tokens: ${usage.total_tokens || 0}${RESET3}
+`
+    );
+    return {
+      success: true,
+      response: content,
+      model,
+      durationSeconds,
+      usage
+    };
+  } catch (err) {
+    const durationSeconds = Math.round((Date.now() - startTime) / 100) / 10;
+    return {
+      success: false,
+      response: "",
+      model,
+      durationSeconds,
+      error: `Failed to connect to OpenAI API: ${err.message}`
+    };
+  }
+}
+async function runChatgptReview(options) {
+  const focus = options.focus || "thorough";
+  const focusPrompts = {
+    security: "Focus strictly on security vulnerabilities, permission hazards, input sanitation, and auth leaks.",
+    performance: "Focus on algorithmic performance, asymptotic complexity, unnecessary disk/network I/O, and memory leaks.",
+    architecture: "Focus on separation of concerns, modularity, idiomatic design patterns, and maintainability.",
+    thorough: "Provide a thorough multi-dimensional review covering correctness, edge cases, security, and clean code principles."
+  };
+  const systemPrompt = `You are a principal engineer conducting an adversarial code review.
+${focusPrompts[focus] || focusPrompts.thorough}
+- Point out concrete issues with line references or code snippets where applicable.
+- Categorize findings into: CRITICAL, WARNING, SUGGESTION.
+- If the code is solid, state what is well implemented.`;
+  const prompt = options.instructions ? `${options.instructions}
+
+Review the following code or git diff:` : "Review the following code or git diff against best practices:";
+  return runChatgptConsult({
+    prompt,
+    context: options.diffOrCode,
+    systemPrompt,
+    model: options.model || "o3-mini"
+  });
+}
+
+// src/utils/transcript.ts
+import fs3 from "node:fs/promises";
+import path4 from "node:path";
+import os4 from "node:os";
 async function inspectTranscript(conversationId, maxSteps = 20) {
-  const homeDir = os2.homedir();
-  const transcriptPath = path2.join(
+  const homeDir = os4.homedir();
+  const transcriptPath = path4.join(
     homeDir,
     ".gemini",
     "antigravity-cli",
@@ -21750,7 +22175,7 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
     "transcript.jsonl"
   );
   try {
-    const content = await fs.readFile(transcriptPath, "utf8");
+    const content = await fs3.readFile(transcriptPath, "utf8");
     const lines = content.trim().split("\n").filter(Boolean);
     const totalSteps = lines.length;
     const recentLines = lines.slice(-maxSteps);
@@ -21796,17 +22221,17 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
 }
 
 // src/utils/savings.ts
-import fs2 from "node:fs/promises";
-import path3 from "node:path";
-import os3 from "node:os";
+import fs4 from "node:fs/promises";
+import path5 from "node:path";
+import os5 from "node:os";
 function getStoragePath() {
-  const homeDir = os3.homedir();
-  return path3.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
+  const homeDir = os5.homedir();
+  return path5.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
 }
 async function loadStorage() {
   const filePath = getStoragePath();
   try {
-    const data = await fs2.readFile(filePath, "utf8");
+    const data = await fs4.readFile(filePath, "utf8");
     return JSON.parse(data);
   } catch {
     return {
@@ -21820,8 +22245,8 @@ async function loadStorage() {
 async function saveStorage(storage) {
   const filePath = getStoragePath();
   try {
-    await fs2.mkdir(path3.dirname(filePath), { recursive: true });
-    await fs2.writeFile(filePath, JSON.stringify(storage, null, 2), "utf8");
+    await fs4.mkdir(path5.dirname(filePath), { recursive: true });
+    await fs4.writeFile(filePath, JSON.stringify(storage, null, 2), "utf8");
   } catch {
   }
 }
@@ -21870,15 +22295,19 @@ async function getSavingsSummary() {
 // src/server/stdio.ts
 var execAsync2 = promisify2(exec2);
 var backgroundTasks = /* @__PURE__ */ new Map();
-function formatPayload(result, savings, customConversationId) {
+function formatPayload(result, savings, customConversationId, workerName = "antigravity") {
+  const convId = result.conversationId || result.threadId || customConversationId;
   return {
     success: result.success,
     status: result.status,
-    conversation_id: result.conversationId || customConversationId,
+    worker: workerName,
+    conversation_id: convId,
+    thread_id: result.threadId || convId,
     response: result.response,
     duration_seconds: result.durationSeconds,
     num_turns: result.numTurns,
     token_savings_metrics: {
+      tokens_processed_by_worker: savings.tokensProcessedByAntigravity,
       tokens_processed_by_antigravity: savings.tokensProcessedByAntigravity,
       tokens_ingested_by_claude: savings.tokensIngestedByClaude,
       net_tokens_saved_in_claude_context: savings.tokensSavedInClaudeContext,
@@ -21886,8 +22315,9 @@ function formatPayload(result, savings, customConversationId) {
       lifetime_claude_context_saved: savings.lifetimeClaudeContextSaved,
       total_tasks_delegated: savings.totalTasksDelegated
     },
-    tokens_used_by_agy: result.usage,
-    usage_limit_alert: result.status === "USAGE_LIMIT_EXHAUSTED" ? "\u26D4 ANTIGRAVITY USAGE LIMIT EXHAUSTED: Antigravity/Gemini model quota or account usage limit is exhausted (429 / Resource Exhausted). Do NOT retry or spawn Claude subagents without explicit user authorization." : void 0,
+    tokens_used: result.usage,
+    tokens_used_by_agy: workerName === "antigravity" ? result.usage : void 0,
+    usage_limit_alert: result.status === "USAGE_LIMIT_EXHAUSTED" ? `\u26D4 ${workerName.toUpperCase()} USAGE LIMIT EXHAUSTED: Model quota or account usage limit is exhausted (429 / Resource Exhausted). Do NOT retry or spawn Claude subagents without explicit user authorization.` : void 0,
     execution_trace: result.executionTrace && result.executionTrace.length > 0 ? result.executionTrace : void 0,
     git_changes: result.gitChanges?.hasChanges ? {
       modified: result.gitChanges.modifiedFiles,
@@ -21898,9 +22328,68 @@ function formatPayload(result, savings, customConversationId) {
     stderr: result.rawStderr
   };
 }
+function handleCheckTask(taskId) {
+  const task = backgroundTasks.get(taskId);
+  if (!task) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              error: `Task ID not found: ${taskId}`,
+              available_tasks: Array.from(backgroundTasks.keys())
+            },
+            null,
+            2
+          )
+        }
+      ]
+    };
+  }
+  if (task.status === "RUNNING") {
+    const elapsedSeconds = Math.round((Date.now() - task.startTime) / 1e3);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              status: "RUNNING",
+              task_id: task.id,
+              agent: task.agent,
+              elapsed_seconds: elapsedSeconds,
+              message: `Task is actively executing in background (${elapsedSeconds}s elapsed). Check again shortly.`,
+              recent_trace: task.executionTrace.slice(-5)
+            },
+            null,
+            2
+          )
+        }
+      ]
+    };
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            task_id: task.id,
+            agent: task.agent,
+            status: task.status,
+            ...task.result
+          },
+          null,
+          2
+        )
+      }
+    ]
+  };
+}
 var server = new McpServer({
-  name: "antigravity-bridge",
-  version: "1.3.1"
+  name: "omni-bridge",
+  version: "1.4.0"
 });
 server.tool(
   "agy_execute",
@@ -21917,9 +22406,10 @@ server.tool(
   },
   async (args) => {
     if (args.async) {
-      const taskId = randomUUID();
+      const taskId = randomUUID2();
       const task = {
         id: taskId,
+        agent: "antigravity",
         status: "RUNNING",
         instructions: args.instructions,
         workspaceDir: args.workspace_dir || process.cwd(),
@@ -21963,7 +22453,7 @@ server.tool(
           result2.response.length,
           result2.conversationId
         );
-        task.result = formatPayload(result2, savings2);
+        task.result = formatPayload(result2, savings2, void 0, "antigravity");
       }).catch((err) => {
         task.endTime = Date.now();
         task.status = "FAILED";
@@ -21981,6 +22471,7 @@ server.tool(
               {
                 status: "RUNNING",
                 task_id: taskId,
+                agent: "antigravity",
                 message: "Antigravity task launched in background to avoid Claude Desktop 60-second MCP client timeouts. Call agy_check_task with this task_id to check progress or get final results.",
                 workspace_dir: task.workspaceDir
               },
@@ -22007,7 +22498,7 @@ server.tool(
       result.response.length,
       result.conversationId
     );
-    const payload = formatPayload(result, savings);
+    const payload = formatPayload(result, savings, void 0, "antigravity");
     return {
       content: [
         {
@@ -22032,9 +22523,10 @@ server.tool(
   },
   async (args) => {
     if (args.async) {
-      const taskId = randomUUID();
+      const taskId = randomUUID2();
       const task = {
         id: taskId,
+        agent: "antigravity",
         status: "RUNNING",
         instructions: args.instructions,
         workspaceDir: args.workspace_dir || process.cwd(),
@@ -22077,7 +22569,7 @@ server.tool(
           result2.response.length,
           result2.conversationId || args.conversation_id
         );
-        task.result = formatPayload(result2, savings2, args.conversation_id);
+        task.result = formatPayload(result2, savings2, args.conversation_id, "antigravity");
       }).catch((err) => {
         task.endTime = Date.now();
         task.status = "FAILED";
@@ -22095,6 +22587,7 @@ server.tool(
               {
                 status: "RUNNING",
                 task_id: taskId,
+                agent: "antigravity",
                 conversation_id: args.conversation_id,
                 message: "Antigravity follow-up task launched in background to avoid Claude Desktop 60-second MCP client timeouts. Call agy_check_task with this task_id to check progress or get final results.",
                 workspace_dir: task.workspaceDir
@@ -22121,7 +22614,7 @@ server.tool(
       result.response.length,
       result.conversationId || args.conversation_id
     );
-    const payload = formatPayload(result, savings, args.conversation_id);
+    const payload = formatPayload(result, savings, args.conversation_id, "antigravity");
     return {
       content: [
         {
@@ -22134,71 +22627,17 @@ server.tool(
 );
 server.tool(
   "agy_check_task",
-  "Checks the status, running duration, execution trace, and results of an asynchronous Antigravity task started with async: true.",
+  "Checks the status, running duration, execution trace, and results of an asynchronous task started with async: true.",
   {
-    task_id: external_exports.string().describe("The task ID returned from agy_execute or agy_continue when async is true.")
+    task_id: external_exports.string().describe("The task ID returned from execute or continue calls when async is true.")
   },
   async (args) => {
-    const task = backgroundTasks.get(args.task_id);
-    if (!task) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                error: `Task ID not found: ${args.task_id}`,
-                available_tasks: Array.from(backgroundTasks.keys())
-              },
-              null,
-              2
-            )
-          }
-        ]
-      };
-    }
-    if (task.status === "RUNNING") {
-      const elapsedSeconds = Math.round((Date.now() - task.startTime) / 1e3);
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                status: "RUNNING",
-                task_id: task.id,
-                elapsed_seconds: elapsedSeconds,
-                message: `Task is actively executing in background (${elapsedSeconds}s elapsed). Check again shortly.`,
-                recent_trace: task.executionTrace.slice(-5)
-              },
-              null,
-              2
-            )
-          }
-        ]
-      };
-    }
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(
-            {
-              task_id: task.id,
-              status: task.status,
-              ...task.result
-            },
-            null,
-            2
-          )
-        }
-      ]
-    };
+    return handleCheckTask(args.task_id);
   }
 );
 server.tool(
   "agy_get_token_savings",
-  "Returns lifetime token savings analytics and history of context window saved across all Antigravity delegations.",
+  "Returns lifetime token savings analytics and history of context window saved across all delegations.",
   {},
   async () => {
     const summary = await getSavingsSummary();
@@ -22280,12 +22719,363 @@ server.tool(
     }
   }
 );
+server.tool(
+  "codex_execute",
+  "Spins up an OpenAI Codex subagent to autonomously execute coding, refactoring, testing, and file editing tasks with live streaming progress and token savings tracking.",
+  {
+    instructions: external_exports.string().describe("Detailed step-by-step instructions for Codex subagent. Specify target paths, constraints, and requirements."),
+    workspace_dir: external_exports.string().optional().describe("Target workspace directory path (MANDATORY in Claude Desktop to point to the project repo). Defaults to current working directory."),
+    async: external_exports.boolean().optional().default(false).describe("Run task asynchronously in background. RECOMMENDED in Claude Desktop for tasks taking >45s to avoid 60s client timeouts. Check status with codex_check_task or agy_check_task."),
+    model: external_exports.string().optional().default("gpt-5.6-luna").describe("Model to use for Codex (e.g. gpt-5.6-luna, gpt-5.6-terra, gpt-reserve). Default is gpt-5.6-luna."),
+    reasoning_effort: external_exports.enum(["low", "medium", "high", "xhigh"]).optional().describe("Reasoning effort for Codex model."),
+    sandbox: external_exports.enum(["read-only", "workspace-write", "danger-full-access"]).optional().default("danger-full-access").describe("Sandbox policy for command execution."),
+    timeout_seconds: external_exports.number().optional().default(600).describe("Max execution time in seconds (default: 600)."),
+    include_git_diff: external_exports.boolean().optional().default(true).describe("Include git status and diff statistics of modified files.")
+  },
+  async (args) => {
+    if (args.async) {
+      const taskId = randomUUID2();
+      const task = {
+        id: taskId,
+        agent: "codex",
+        status: "RUNNING",
+        instructions: args.instructions,
+        workspaceDir: args.workspace_dir || process.cwd(),
+        startTime: Date.now(),
+        executionTrace: []
+      };
+      backgroundTasks.set(taskId, task);
+      runCodex({
+        instructions: args.instructions,
+        workspaceDir: args.workspace_dir,
+        model: args.model,
+        reasoningEffort: args.reasoning_effort,
+        sandbox: args.sandbox,
+        timeoutSeconds: args.timeout_seconds,
+        includeGitDiff: args.include_git_diff,
+        onStreamEvent: (event) => {
+          if (event.type === "item.completed" && event.item) {
+            const item = event.item;
+            if (item.type === "tool" || item.type === "command_execution") {
+              task.executionTrace.push({
+                type: "tool",
+                name: item.name || item.command || "tool_call"
+              });
+            }
+          }
+        }
+      }).then(async (result2) => {
+        task.endTime = Date.now();
+        task.status = result2.success ? "SUCCESS" : result2.status || "FAILED";
+        const totalTokens2 = result2.usage?.total_tokens || 0;
+        const savings2 = await calculateAndRecordSavings(
+          totalTokens2,
+          args.instructions.length,
+          result2.response.length,
+          result2.threadId
+        );
+        task.result = formatPayload(result2, savings2, result2.threadId, "codex");
+      }).catch((err) => {
+        task.endTime = Date.now();
+        task.status = "FAILED";
+        task.result = {
+          success: false,
+          status: "ERROR",
+          error: err instanceof Error ? err.message : String(err)
+        };
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                status: "RUNNING",
+                task_id: taskId,
+                agent: "codex",
+                message: "Codex task launched in background to avoid Claude Desktop 60-second MCP client timeouts. Call codex_check_task or agy_check_task with this task_id to check progress or get final results.",
+                workspace_dir: task.workspaceDir
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+    const result = await runCodex({
+      instructions: args.instructions,
+      workspaceDir: args.workspace_dir,
+      model: args.model,
+      reasoningEffort: args.reasoning_effort,
+      sandbox: args.sandbox,
+      timeoutSeconds: args.timeout_seconds,
+      includeGitDiff: args.include_git_diff
+    });
+    const totalTokens = result.usage?.total_tokens || 0;
+    const savings = await calculateAndRecordSavings(
+      totalTokens,
+      args.instructions.length,
+      result.response.length,
+      result.threadId
+    );
+    const payload = formatPayload(result, savings, result.threadId, "codex");
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(payload, null, 2)
+        }
+      ]
+    };
+  }
+);
+server.tool(
+  "codex_continue",
+  "Continues an existing Codex session thread for follow-up adjustments, corrections, or iterative bugfixing.",
+  {
+    thread_id: external_exports.string().describe("The thread ID returned from a prior codex_execute or codex_continue call."),
+    instructions: external_exports.string().describe("Follow-up instructions or bugfix feedback for Codex."),
+    workspace_dir: external_exports.string().optional().describe("Target workspace directory path (MANDATORY in Claude Desktop to point to the project repo). Defaults to current working directory."),
+    async: external_exports.boolean().optional().default(false).describe("Run task asynchronously in background."),
+    model: external_exports.string().optional().describe("Model override (e.g. gpt-5.6-luna)."),
+    reasoning_effort: external_exports.enum(["low", "medium", "high", "xhigh"]).optional(),
+    timeout_seconds: external_exports.number().optional().default(600),
+    include_git_diff: external_exports.boolean().optional().default(true)
+  },
+  async (args) => {
+    if (args.async) {
+      const taskId = randomUUID2();
+      const task = {
+        id: taskId,
+        agent: "codex",
+        status: "RUNNING",
+        instructions: args.instructions,
+        workspaceDir: args.workspace_dir || process.cwd(),
+        startTime: Date.now(),
+        executionTrace: []
+      };
+      backgroundTasks.set(taskId, task);
+      runCodex({
+        threadId: args.thread_id,
+        instructions: args.instructions,
+        workspaceDir: args.workspace_dir,
+        model: args.model,
+        reasoningEffort: args.reasoning_effort,
+        timeoutSeconds: args.timeout_seconds,
+        includeGitDiff: args.include_git_diff,
+        onStreamEvent: (event) => {
+          if (event.type === "item.completed" && event.item) {
+            const item = event.item;
+            if (item.type === "tool" || item.type === "command_execution") {
+              task.executionTrace.push({
+                type: "tool",
+                name: item.name || item.command || "tool_call"
+              });
+            }
+          }
+        }
+      }).then(async (result2) => {
+        task.endTime = Date.now();
+        task.status = result2.success ? "SUCCESS" : result2.status || "FAILED";
+        const totalTokens2 = result2.usage?.total_tokens || 0;
+        const savings2 = await calculateAndRecordSavings(
+          totalTokens2,
+          args.instructions.length,
+          result2.response.length,
+          result2.threadId || args.thread_id
+        );
+        task.result = formatPayload(result2, savings2, args.thread_id, "codex");
+      }).catch((err) => {
+        task.endTime = Date.now();
+        task.status = "FAILED";
+        task.result = {
+          success: false,
+          status: "ERROR",
+          error: err instanceof Error ? err.message : String(err)
+        };
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                status: "RUNNING",
+                task_id: taskId,
+                agent: "codex",
+                thread_id: args.thread_id,
+                message: "Codex follow-up task launched in background to avoid Claude Desktop 60-second MCP client timeouts. Call codex_check_task with this task_id to check progress or get final results.",
+                workspace_dir: task.workspaceDir
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+    const result = await runCodex({
+      threadId: args.thread_id,
+      instructions: args.instructions,
+      workspaceDir: args.workspace_dir,
+      model: args.model,
+      reasoningEffort: args.reasoning_effort,
+      timeoutSeconds: args.timeout_seconds,
+      includeGitDiff: args.include_git_diff
+    });
+    const totalTokens = result.usage?.total_tokens || 0;
+    const savings = await calculateAndRecordSavings(
+      totalTokens,
+      args.instructions.length,
+      result.response.length,
+      result.threadId || args.thread_id
+    );
+    const payload = formatPayload(result, savings, args.thread_id, "codex");
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(payload, null, 2)
+        }
+      ]
+    };
+  }
+);
+server.tool(
+  "codex_check_task",
+  "Checks the status, running duration, execution trace, and results of an asynchronous task (Codex or Antigravity).",
+  {
+    task_id: external_exports.string().describe("The task ID returned from execute or continue calls when async is true.")
+  },
+  async (args) => {
+    return handleCheckTask(args.task_id);
+  }
+);
+server.tool(
+  "codex_get_status",
+  "Checks whether the OpenAI Codex CLI is installed, operational, and reports current authentication status.",
+  {},
+  async () => {
+    try {
+      const { stdout: versionOut } = await execAsync2("codex --version", {
+        timeout: 5e3,
+        env: {
+          ...process.env,
+          PATH: getEnhancedPath()
+        }
+      });
+      let loginInfo = "Unknown";
+      try {
+        const { stdout: loginOut } = await execAsync2("codex login status", {
+          timeout: 5e3,
+          env: {
+            ...process.env,
+            PATH: getEnhancedPath()
+          }
+        });
+        loginInfo = loginOut.trim();
+      } catch {
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                available: true,
+                version: versionOut.trim(),
+                auth_status: loginInfo,
+                message: "Codex CLI is installed and available in PATH."
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    } catch (err) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                available: false,
+                error: err.message,
+                message: "Codex CLI was not found in PATH or failed to respond."
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    }
+  }
+);
+server.tool(
+  "chatgpt_consult",
+  "Consults ChatGPT / OpenAI models (e.g. o3-mini, gpt-4o, o1) for high-level technical advice, architectural review, edge case analysis, or second opinions.",
+  {
+    prompt: external_exports.string().describe("The question, design challenge, or architectural question to consult ChatGPT on."),
+    context: external_exports.string().optional().describe("Optional relevant context (code snippets, error logs, requirements)."),
+    system_prompt: external_exports.string().optional().describe("Optional custom system prompt directive."),
+    model: external_exports.string().optional().default("o3-mini").describe("Model to consult: o3-mini, gpt-4o, gpt-4o-mini, o1, etc. Default is o3-mini."),
+    reasoning_effort: external_exports.enum(["low", "medium", "high"]).optional().describe("Reasoning effort for o-series models (low, medium, high)."),
+    temperature: external_exports.number().optional().describe("Sampling temperature for non-reasoning models (0.0 to 1.0).")
+  },
+  async (args) => {
+    const result = await runChatgptConsult({
+      prompt: args.prompt,
+      context: args.context,
+      systemPrompt: args.system_prompt,
+      model: args.model,
+      reasoningEffort: args.reasoning_effort,
+      temperature: args.temperature
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  }
+);
+server.tool(
+  "chatgpt_review",
+  "Requests an adversarial code review from ChatGPT on a git diff, file content, or code snippet with specialized focus.",
+  {
+    diff_or_code: external_exports.string().describe("The code snippet or git diff to review."),
+    focus: external_exports.enum(["security", "performance", "architecture", "thorough"]).optional().default("thorough").describe("Review focus area: security, performance, architecture, or thorough. Default is thorough."),
+    instructions: external_exports.string().optional().describe("Specific review instructions or questions."),
+    model: external_exports.string().optional().default("o3-mini").describe("Model to use for review (default: o3-mini).")
+  },
+  async (args) => {
+    const result = await runChatgptReview({
+      diffOrCode: args.diff_or_code,
+      focus: args.focus,
+      instructions: args.instructions,
+      model: args.model
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  }
+);
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
 main().catch((err) => {
-  process.stderr.write(`agy-mcp failed to start: ${err instanceof Error ? err.message : String(err)}
+  process.stderr.write(`omni-bridge failed to start: ${err instanceof Error ? err.message : String(err)}
 `);
   process.exit(1);
 });
