@@ -176,11 +176,13 @@ Large coding tasks quickly exhaust Claude's context window. Instead of loading d
 The MCP client swallows the server's stderr, so only Claude sees what a subagent is doing. Every Antigravity, Codex, and ChatGPT task also writes structured events to `~/.agy-mcp/live.jsonl`, and `watch` renders them as threads in any terminal: one thread per task, with its instructions, thinking steps, tool calls, streamed replies, changed files, and a closing status.
 
 ```bash
-npx -y agy-mcp watch            # replay running tasks, then follow live
-npx -y agy-mcp watch -n 3       # also replay the last 3 tasks in full
-npx -y agy-mcp watch -t 306388  # one task (id prefix, same id agy_check_task uses)
-npx -y agy-mcp watch -q         # steps only, hide streamed text
-npx -y agy-mcp watch --list     # table of recent tasks and exit
+alias agywatch='npx -y github:josephjerryrhule/agy-mcp watch'   # add to ~/.zshrc once
+
+agywatch            # replay running tasks, then follow live
+agywatch -n 3       # also replay the last 3 tasks in full
+agywatch -t 306388  # one task (id prefix, same id agy_check_task uses)
+agywatch -q         # steps only, hide streamed text
+agywatch --list     # table of recent tasks and exit
 ```
 
 ```

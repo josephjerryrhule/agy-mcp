@@ -5,7 +5,7 @@
   "main": "dist/bundle/index.mjs",
   "type": "module",
   "bin": {
-    "agy-mcp": "./dist/bundle/index.mjs"
+    "agy-mcp": "dist/bundle/index.mjs"
   },
   "files": [
     "dist/bundle/index.mjs",
