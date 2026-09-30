@@ -2,6 +2,7 @@ import os from 'node:os'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { runCodex } from './codex.js'
+import { createFeed } from '../utils/livefeed.js'
 
 export interface ChatgptConsultOptions {
   prompt: string
@@ -79,6 +80,7 @@ export async function runChatgptConsult(options: ChatgptConsultOptions): Promise
           : 'gpt-5.6-luna',
       timeoutSeconds: 300,
       includeGitDiff: false,
+      feedAgent: 'chatgpt',
     })
 
     return {
@@ -135,6 +137,19 @@ export async function runChatgptConsult(options: ChatgptConsultOptions): Promise
 
   const startTime = Date.now()
   process.stderr.write(`\n${BLUE}${BOLD}💬 [ChatGPT Consulting Initialized]${RESET} ${DIM}model: ${model}${RESET}\n`)
+  const feed = createFeed('chatgpt')
+  feed.emit('start', { instructions: options.prompt, model })
+  const finish = (result: ChatgptConsultResult): ChatgptConsultResult => {
+    if (result.success) feed.emit('message', { text: result.response })
+    feed.emit('finish', {
+      status: result.success ? 'SUCCESS' : 'FAILED',
+      success: result.success,
+      duration: result.durationSeconds,
+      tokens: result.usage?.total_tokens,
+      error: result.error,
+    })
+    return result
+  }
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -160,13 +175,13 @@ export async function runChatgptConsult(options: ChatgptConsultOptions): Promise
         errMsg += `: ${errText.slice(0, 300)}`
       }
 
-      return {
+      return finish({
         success: false,
         response: '',
         model,
         durationSeconds,
         error: errMsg,
-      }
+      })
     }
 
     const json = (await res.json()) as any
@@ -189,22 +204,22 @@ export async function runChatgptConsult(options: ChatgptConsultOptions): Promise
       }${RESET}\n`
     )
 
-    return {
+    return finish({
       success: true,
       response: content,
       model,
       durationSeconds,
       usage,
-    }
+    })
   } catch (err: any) {
     const durationSeconds = Math.round((Date.now() - startTime) / 100) / 10
-    return {
+    return finish({
       success: false,
       response: '',
       model,
       durationSeconds,
       error: `Failed to connect to OpenAI API: ${err.message}`,
-    }
+    })
   }
 }
 

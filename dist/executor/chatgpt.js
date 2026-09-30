@@ -2,6 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { runCodex } from './codex.js';
+import { createFeed } from '../utils/livefeed.js';
 const BOLD = '\x1b[1m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
@@ -41,6 +42,7 @@ export async function runChatgptConsult(options) {
                 : 'gpt-5.6-luna',
             timeoutSeconds: 300,
             includeGitDiff: false,
+            feedAgent: 'chatgpt',
         });
         return {
             success: codexResult.success,
@@ -87,6 +89,20 @@ export async function runChatgptConsult(options) {
     }
     const startTime = Date.now();
     process.stderr.write(`\n${BLUE}${BOLD}💬 [ChatGPT Consulting Initialized]${RESET} ${DIM}model: ${model}${RESET}\n`);
+    const feed = createFeed('chatgpt');
+    feed.emit('start', { instructions: options.prompt, model });
+    const finish = (result) => {
+        if (result.success)
+            feed.emit('message', { text: result.response });
+        feed.emit('finish', {
+            status: result.success ? 'SUCCESS' : 'FAILED',
+            success: result.success,
+            duration: result.durationSeconds,
+            tokens: result.usage?.total_tokens,
+            error: result.error,
+        });
+        return result;
+    };
     try {
         const res = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -109,13 +125,13 @@ export async function runChatgptConsult(options) {
             catch {
                 errMsg += `: ${errText.slice(0, 300)}`;
             }
-            return {
+            return finish({
                 success: false,
                 response: '',
                 model,
                 durationSeconds,
                 error: errMsg,
-            };
+            });
         }
         const json = (await res.json());
         const choice = json.choices?.[0];
@@ -130,23 +146,23 @@ export async function runChatgptConsult(options) {
             }
             : {};
         process.stderr.write(`\n${GREEN}${BOLD}✨ [ChatGPT Response Received]${RESET} ${DIM}Duration: ${durationSeconds}s, Tokens: ${usage.total_tokens || 0}${RESET}\n`);
-        return {
+        return finish({
             success: true,
             response: content,
             model,
             durationSeconds,
             usage,
-        };
+        });
     }
     catch (err) {
         const durationSeconds = Math.round((Date.now() - startTime) / 100) / 10;
-        return {
+        return finish({
             success: false,
             response: '',
             model,
             durationSeconds,
             error: `Failed to connect to OpenAI API: ${err.message}`,
-        };
+        });
     }
 }
 export async function runChatgptReview(options) {

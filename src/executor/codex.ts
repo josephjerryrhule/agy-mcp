@@ -4,6 +4,7 @@ import os from 'node:os'
 import fs from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { getGitSummary, type GitSummary } from '../utils/git.js'
+import { createFeed, type FeedAgent } from '../utils/livefeed.js'
 
 export interface CodexExecuteOptions {
   instructions: string
@@ -15,6 +16,10 @@ export interface CodexExecuteOptions {
   timeoutSeconds?: number
   includeGitDiff?: boolean
   onStreamEvent?: (event: any) => void
+  // Id shown in the live feed; pass the background task id so `watch` and codex_check_task agree
+  taskId?: string
+  // Label for the live feed (ChatGPT consults route through Codex)
+  feedAgent?: FeedAgent
 }
 
 export interface CodexUsage {
@@ -127,7 +132,31 @@ ${options.instructions}`
     args.push(formattedInstructions)
   }
 
-  return new Promise<CodexExecuteResult>((resolve) => {
+  const feed = createFeed(options.feedAgent || 'codex', options.taskId)
+  feed.emit('start', {
+    instructions: options.instructions,
+    workspace: cwd,
+    model: modelToUse,
+    effort: options.reasoningEffort,
+    thread: options.threadId,
+  })
+
+  return new Promise<CodexExecuteResult>((settle) => {
+    const resolve = (result: CodexExecuteResult) => {
+      feed.emit('finish', {
+        status: result.status,
+        success: result.success,
+        duration: result.durationSeconds,
+        tokens: result.usage?.total_tokens,
+        thread: result.threadId,
+        files: result.gitChanges
+          ? [...result.gitChanges.modifiedFiles, ...result.gitChanges.untrackedFiles]
+          : undefined,
+        error: result.error,
+        response: result.response?.slice(0, 2000),
+      })
+      settle(result)
+    }
     let stdoutBuffer = ''
     let stderr = ''
     let isTimedOut = false
@@ -177,6 +206,7 @@ ${options.instructions}`
         isQuotaExhausted = true
         quotaErrorReason = text.trim().slice(0, 400)
         process.stderr.write(`\n\x1b[31m\x1b[1m⛔ [Codex Usage/Quota Exhausted]\x1b[0m ${quotaErrorReason}\n`)
+        feed.emit('info', { level: 'error', text: `Usage/quota exhausted: ${quotaErrorReason}` })
         clearTimeout(timer)
         proc.kill('SIGTERM')
         setTimeout(() => {
@@ -202,6 +232,7 @@ ${options.instructions}`
           if (parsed.type === 'thread.started' && parsed.thread_id) {
             threadId = parsed.thread_id
             process.stderr.write(`${CYAN}🧵 [Codex Thread: ${threadId}]${RESET}\n`)
+            feed.emit('info', { text: `thread ${threadId}` })
           } else if (parsed.type === 'turn.started') {
             numTurns += 1
           } else if (parsed.type === 'turn.completed' && parsed.usage) {
@@ -213,8 +244,34 @@ ${options.instructions}`
               cached_input_tokens: u.cached_input_tokens,
               total_tokens: (u.input_tokens || 0) + (u.output_tokens || 0),
             }
+          } else if (parsed.type === 'item.started' && parsed.item) {
+            const item = parsed.item
+            if (item.type === 'command_execution') {
+              feed.emit('tool', { name: 'shell', detail: item.command })
+            } else if (item.type === 'mcp_tool_call') {
+              feed.emit('tool', { name: `${item.server || 'mcp'}.${item.tool || 'tool'}` })
+            } else if (item.type === 'web_search') {
+              feed.emit('tool', { name: 'web_search', detail: item.query })
+            }
           } else if (parsed.type === 'item.completed' && parsed.item) {
             const item = parsed.item
+            if (item.type === 'reasoning' && item.text) {
+              feed.emit('thinking', { text: item.text })
+            } else if (item.type === 'agent_message' && item.text) {
+              feed.emit('message', { text: item.text })
+            } else if (item.type === 'command_execution') {
+              feed.emit('tool_done', { name: 'shell', exitCode: item.exit_code })
+            } else if (item.type === 'mcp_tool_call') {
+              feed.emit('tool_done', { name: `${item.server || 'mcp'}.${item.tool || 'tool'}` })
+            } else if (item.type === 'file_change' && Array.isArray(item.changes)) {
+              for (const change of item.changes) {
+                feed.emit('tool_done', { name: `file ${change.kind || 'edit'}`, detail: change.path })
+              }
+            } else if (item.type === 'todo_list' && Array.isArray(item.items)) {
+              feed.emit('info', {
+                text: item.items.map((t: any) => `${t.completed ? '☑' : '☐'} ${t.text}`).join('\n'),
+              })
+            }
             if (item.type === 'agent_message' && item.text) {
               accumulatedResponse = item.text
               process.stderr.write(`${DIM}${item.text}${RESET}\n`)

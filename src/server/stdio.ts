@@ -10,6 +10,7 @@ import { runCodex } from '../executor/codex.js'
 import { runChatgptConsult, runChatgptReview } from '../executor/chatgpt.js'
 import { inspectTranscript } from '../utils/transcript.js'
 import { calculateAndRecordSavings, getSavingsSummary } from '../utils/savings.js'
+import { runWatch } from '../cli/watch.js'
 
 const execAsync = promisify(exec)
 
@@ -135,7 +136,7 @@ function handleCheckTask(taskId: string) {
 
 const server = new McpServer({
   name: 'omni-bridge',
-  version: '1.4.0',
+  version: '1.5.0',
 })
 
 // ==========================================
@@ -171,6 +172,7 @@ server.tool(
       backgroundTasks.set(taskId, task)
 
       runAgy({
+        taskId,
         instructions: args.instructions,
         workspaceDir: args.workspace_dir,
         effort: args.effort,
@@ -300,6 +302,7 @@ server.tool(
       backgroundTasks.set(taskId, task)
 
       runAgy({
+        taskId,
         conversationId: args.conversation_id,
         instructions: args.instructions,
         workspaceDir: args.workspace_dir,
@@ -535,6 +538,7 @@ server.tool(
       backgroundTasks.set(taskId, task)
 
       runCodex({
+        taskId,
         instructions: args.instructions,
         workspaceDir: args.workspace_dir,
         model: args.model,
@@ -658,6 +662,7 @@ server.tool(
       backgroundTasks.set(taskId, task)
 
       runCodex({
+        taskId,
         threadId: args.thread_id,
         instructions: args.instructions,
         workspaceDir: args.workspace_dir,
@@ -896,6 +901,10 @@ server.tool(
 )
 
 async function main() {
+  if (process.argv[2] === 'watch') {
+    await runWatch(process.argv.slice(3))
+    return
+  }
   const transport = new StdioServerTransport()
   await server.connect(transport)
 }

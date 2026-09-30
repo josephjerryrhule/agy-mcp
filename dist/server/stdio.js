@@ -10,6 +10,7 @@ import { runCodex } from '../executor/codex.js';
 import { runChatgptConsult, runChatgptReview } from '../executor/chatgpt.js';
 import { inspectTranscript } from '../utils/transcript.js';
 import { calculateAndRecordSavings, getSavingsSummary } from '../utils/savings.js';
+import { runWatch } from '../cli/watch.js';
 const execAsync = promisify(exec);
 const backgroundTasks = new Map();
 function formatPayload(result, savings, customConversationId, workerName = 'antigravity') {
@@ -98,7 +99,7 @@ function handleCheckTask(taskId) {
 }
 const server = new McpServer({
     name: 'omni-bridge',
-    version: '1.4.0',
+    version: '1.5.0',
 });
 // ==========================================
 // 1. ANTIGRAVITY TOOLS
@@ -127,6 +128,7 @@ server.tool('agy_execute', 'Spins up a headless Antigravity (agy) agent to auton
         };
         backgroundTasks.set(taskId, task);
         runAgy({
+            taskId,
             instructions: args.instructions,
             workspaceDir: args.workspace_dir,
             effort: args.effort,
@@ -229,6 +231,7 @@ server.tool('agy_continue', 'Continues an existing Antigravity conversation for 
         };
         backgroundTasks.set(taskId, task);
         runAgy({
+            taskId,
             conversationId: args.conversation_id,
             instructions: args.instructions,
             workspaceDir: args.workspace_dir,
@@ -405,6 +408,7 @@ server.tool('codex_execute', 'Spins up an OpenAI Codex subagent to autonomously 
         };
         backgroundTasks.set(taskId, task);
         runCodex({
+            taskId,
             instructions: args.instructions,
             workspaceDir: args.workspace_dir,
             model: args.model,
@@ -500,6 +504,7 @@ server.tool('codex_continue', 'Continues an existing Codex session thread for fo
         };
         backgroundTasks.set(taskId, task);
         runCodex({
+            taskId,
             threadId: args.thread_id,
             instructions: args.instructions,
             workspaceDir: args.workspace_dir,
@@ -683,6 +688,10 @@ server.tool('chatgpt_review', 'Requests an adversarial code review from ChatGPT 
     };
 });
 async function main() {
+    if (process.argv[2] === 'watch') {
+        await runWatch(process.argv.slice(3));
+        return;
+    }
     const transport = new StdioServerTransport();
     await server.connect(transport);
 }

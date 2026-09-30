@@ -2666,18 +2666,18 @@ var require_validate = __commonJS({
         const { schemaCode } = this;
         this.fail((0, codegen_1._)`${schemaCode} !== undefined && (${(0, codegen_1.or)(this.invalid$data(), condition)})`);
       }
-      error(append, errorParams, errorPaths) {
+      error(append2, errorParams, errorPaths) {
         if (errorParams) {
           this.setParams(errorParams);
-          this._error(append, errorPaths);
+          this._error(append2, errorPaths);
           this.setParams({});
           return;
         }
-        this._error(append, errorPaths);
+        this._error(append2, errorPaths);
       }
-      _error(append, errorPaths) {
+      _error(append2, errorPaths) {
         ;
-        (append ? errors_1.reportExtraError : errors_1.reportError)(this, this.def.error, errorPaths);
+        (append2 ? errors_1.reportExtraError : errors_1.reportError)(this, this.def.error, errorPaths);
       }
       $dataError() {
         (0, errors_1.reportError)(this, this.def.$dataError || errors_1.keyword$DataError);
@@ -3259,8 +3259,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path6) {
-      let input = path6;
+    function removeDotSegments(path7) {
+      let input = path7;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3669,8 +3669,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path6 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path6 && path6 !== "/" ? path6 : void 0;
+        const path7 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path7 && path7 !== "/" ? path7 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -7182,12 +7182,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs5, exportName) {
+    function addFormats(ajv, list, fs7, exportName) {
       var _a;
       var _b;
       (_a = (_b = ajv.opts.code).formats) !== null && _a !== void 0 ? _a : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs5[f]);
+        ajv.addFormat(f, fs7[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7673,8 +7673,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path6, errorMaps, issueData } = params;
-  const fullPath = [...path6, ...issueData.path || []];
+  const { data, path: path7, errorMaps, issueData } = params;
+  const fullPath = [...path7, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7790,11 +7790,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path6, key) {
+  constructor(parent, value, path7, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path6;
+    this._path = path7;
     this._key = key;
   }
   get path() {
@@ -11432,10 +11432,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path7) {
+  if (!path7)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path7.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11755,11 +11755,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path7, issues) {
   return issues.map((iss) => {
     var _a;
     (_a = iss).path ?? (_a.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path7);
     return iss;
   });
 }
@@ -15172,11 +15172,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path6) {
-  if (path6.length === 0) {
+function getDotPath(path7) {
+  if (path7.length === 0) {
     return "object root";
   }
-  return path6.reduce((acc, seg, index) => {
+  return path7.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -21435,12 +21435,12 @@ var StdioServerTransport = class {
 // src/server/stdio.ts
 import { exec as exec2 } from "node:child_process";
 import { promisify as promisify2 } from "node:util";
-import { randomUUID as randomUUID2 } from "node:crypto";
+import { randomUUID as randomUUID3 } from "node:crypto";
 
 // src/executor/agy.ts
 import { spawn } from "node:child_process";
-import path from "node:path";
-import os from "node:os";
+import path2 from "node:path";
+import os2 from "node:os";
 
 // src/utils/git.ts
 import { exec } from "node:child_process";
@@ -21481,6 +21481,73 @@ async function getGitSummary(cwd) {
   }
 }
 
+// src/utils/livefeed.ts
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import { randomUUID } from "node:crypto";
+var MAX_BYTES = 20 * 1024 * 1024;
+function feedDir() {
+  return process.env.AGY_MCP_FEED_DIR || path.join(os.homedir(), ".agy-mcp");
+}
+function feedPath() {
+  return path.join(feedDir(), "live.jsonl");
+}
+var dirReady = false;
+function append(event) {
+  try {
+    const file = feedPath();
+    if (!dirReady) {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      dirReady = true;
+    }
+    try {
+      if (fs.statSync(file).size > MAX_BYTES) {
+        fs.renameSync(file, `${file}.1`);
+      }
+    } catch {
+    }
+    fs.appendFileSync(file, JSON.stringify(event) + "\n");
+  } catch {
+  }
+}
+function createFeed(agent, taskId) {
+  const task = taskId || randomUUID();
+  let pending = "";
+  let timer;
+  const write = (kind, data) => append({ ts: Date.now(), task, agent, kind, ...data });
+  const flush = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = void 0;
+    }
+    if (pending) {
+      write("text", { text: pending });
+      pending = "";
+    }
+  };
+  return {
+    task,
+    emit(kind, data = {}) {
+      flush();
+      write(kind, data);
+    },
+    text(delta) {
+      pending += delta;
+      const cut = pending.lastIndexOf("\n");
+      if (cut >= 0) {
+        const ready = pending.slice(0, cut + 1);
+        pending = pending.slice(cut + 1);
+        write("text", { text: ready });
+      }
+      if (pending && !timer) {
+        timer = setTimeout(flush, 600);
+        timer.unref?.();
+      }
+    }
+  };
+}
+
 // src/executor/agy.ts
 var BOLD = "\x1B[1m";
 var DIM = "\x1B[2m";
@@ -21491,17 +21558,17 @@ var YELLOW = "\x1B[38;2;255;210;70m";
 var PURPLE = "\x1B[38;2;180;120;255m";
 function getEnhancedPath() {
   const extraPaths = [
-    path.join(os.homedir(), ".local", "bin"),
-    path.join(os.homedir(), ".gemini", "antigravity-cli", "bin"),
+    path2.join(os2.homedir(), ".local", "bin"),
+    path2.join(os2.homedir(), ".gemini", "antigravity-cli", "bin"),
     "/opt/homebrew/bin",
     "/opt/homebrew/sbin",
     "/usr/local/bin"
   ];
   const currentPath = process.env.PATH || "";
-  return `${extraPaths.join(path.delimiter)}${path.delimiter}${currentPath}`;
+  return `${extraPaths.join(path2.delimiter)}${path2.delimiter}${currentPath}`;
 }
 async function runAgy(options) {
-  const cwd = path.resolve(options.workspaceDir || process.cwd());
+  const cwd = path2.resolve(options.workspaceDir || process.cwd());
   const timeoutMs = (options.timeoutSeconds || 600) * 1e3;
   const timeoutFlag = `${options.timeoutSeconds || 600}s`;
   const mode = options.mode || "accept-edits";
@@ -21540,7 +21607,29 @@ ${options.instructions}`;
   if (options.model) {
     args.push("--model", options.model);
   }
-  return new Promise((resolve) => {
+  const feed = createFeed("antigravity", options.taskId);
+  feed.emit("start", {
+    instructions: options.instructions,
+    workspace: cwd,
+    model: options.model,
+    effort: options.effort,
+    mode,
+    conversation: options.conversationId
+  });
+  return new Promise((settle) => {
+    const resolve = (result) => {
+      feed.emit("finish", {
+        status: result.status,
+        success: result.success,
+        duration: result.durationSeconds,
+        tokens: result.usage?.total_tokens,
+        conversation: result.conversationId,
+        files: result.gitChanges ? [...result.gitChanges.modifiedFiles, ...result.gitChanges.untrackedFiles] : void 0,
+        error: result.error,
+        response: result.response?.slice(0, 2e3)
+      });
+      settle(result);
+    };
     let stdoutBuffer = "";
     let stderr = "";
     let isTimedOut = false;
@@ -21581,6 +21670,7 @@ ${PURPLE}${BOLD}\u{1F680} [Antigravity Worker Initialized]${RESET} ${DIM}in ${cw
         process.stderr.write(`
 \x1B[31m\x1B[1m\u26D4 [Antigravity Usage/Quota Exhausted]\x1B[0m ${quotaErrorReason}
 `);
+        feed.emit("info", { level: "error", text: `Usage/quota exhausted: ${quotaErrorReason}` });
         clearTimeout(timer);
         proc.kill("SIGTERM");
         setTimeout(() => {
@@ -21609,6 +21699,7 @@ ${PURPLE}${BOLD}\u{1F680} [Antigravity Worker Initialized]${RESET} ${DIM}in ${cw
                   `${CYAN}\u{1F9E0} [Antigravity Thinking]${RESET} ${DIM}${thinking.toLocaleString()} tokens${step.duration_seconds ? ` in ${step.duration_seconds.toFixed(1)}s` : ""}${RESET}
 `
                 );
+                feed.emit("thinking", { tokens: thinking, duration: step.duration_seconds });
                 executionTrace.push({
                   stepIndex: idx,
                   type: "thinking",
@@ -21618,6 +21709,7 @@ ${PURPLE}${BOLD}\u{1F680} [Antigravity Worker Initialized]${RESET} ${DIM}in ${cw
               }
               if (step.text_delta) {
                 process.stderr.write(`${DIM}${step.text_delta}${RESET}`);
+                feed.text(step.text_delta);
               }
             } else if (step.step_type === "tool") {
               const toolName = step.tool_name || step.tool_info?.name || "unknown_tool";
@@ -21628,11 +21720,13 @@ ${PURPLE}${BOLD}\u{1F680} [Antigravity Worker Initialized]${RESET} ${DIM}in ${cw
                   `${YELLOW}\u26A1 [Antigravity Tool: ${toolName}]${RESET} ${DIM}${paramPreview}${RESET}
 `
                 );
+                feed.emit("tool", { name: toolName, detail: paramPreview ? String(paramPreview) : void 0 });
               } else if (step.state === "DONE") {
                 process.stderr.write(
                   `${GREEN}\u2705 [Tool Completed]${RESET} ${DIM}${toolName}${step.duration_seconds ? ` (${step.duration_seconds.toFixed(2)}s)` : ""}${RESET}
 `
                 );
+                feed.emit("tool_done", { name: toolName, duration: step.duration_seconds });
                 executionTrace.push({
                   stepIndex: idx,
                   type: "tool",
@@ -21735,10 +21829,10 @@ ${GREEN}${BOLD}\u2728 [Antigravity Finished]${RESET} ${DIM}Status: ${parsed.resu
 
 // src/executor/codex.ts
 import { spawn as spawn2 } from "node:child_process";
-import path2 from "node:path";
-import os2 from "node:os";
-import fs from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import path3 from "node:path";
+import os3 from "node:os";
+import fs2 from "node:fs/promises";
+import { randomUUID as randomUUID2 } from "node:crypto";
 var BOLD2 = "\x1B[1m";
 var DIM2 = "\x1B[2m";
 var RESET2 = "\x1B[0m";
@@ -21748,20 +21842,20 @@ var YELLOW2 = "\x1B[38;2;255;210;70m";
 var ORANGE = "\x1B[38;2;255;160;70m";
 function getEnhancedPath2() {
   const extraPaths = [
-    path2.join(os2.homedir(), ".local", "bin"),
-    path2.join(os2.homedir(), ".gemini", "antigravity-cli", "bin"),
+    path3.join(os3.homedir(), ".local", "bin"),
+    path3.join(os3.homedir(), ".gemini", "antigravity-cli", "bin"),
     "/opt/homebrew/bin",
     "/opt/homebrew/sbin",
     "/usr/local/bin"
   ];
   const currentPath = process.env.PATH || "";
-  return `${extraPaths.join(path2.delimiter)}${path2.delimiter}${currentPath}`;
+  return `${extraPaths.join(path3.delimiter)}${path3.delimiter}${currentPath}`;
 }
 async function runCodex(options) {
-  const cwd = path2.resolve(options.workspaceDir || process.cwd());
+  const cwd = path3.resolve(options.workspaceDir || process.cwd());
   const timeoutMs = (options.timeoutSeconds || 600) * 1e3;
   const startTime = Date.now();
-  const tempOutputFile = path2.join(os2.tmpdir(), `codex-out-${randomUUID()}.txt`);
+  const tempOutputFile = path3.join(os3.tmpdir(), `codex-out-${randomUUID2()}.txt`);
   const formattedInstructions = `[AUTONOMOUS EXECUTION MODE]
 You are running as an unattended background worker delegated by Claude.
 - Do NOT ask interactive questions, request confirmation, or pause for feedback.
@@ -21811,7 +21905,28 @@ ${options.instructions}`;
     args.push("-o", tempOutputFile);
     args.push(formattedInstructions);
   }
-  return new Promise((resolve) => {
+  const feed = createFeed(options.feedAgent || "codex", options.taskId);
+  feed.emit("start", {
+    instructions: options.instructions,
+    workspace: cwd,
+    model: modelToUse,
+    effort: options.reasoningEffort,
+    thread: options.threadId
+  });
+  return new Promise((settle) => {
+    const resolve = (result) => {
+      feed.emit("finish", {
+        status: result.status,
+        success: result.success,
+        duration: result.durationSeconds,
+        tokens: result.usage?.total_tokens,
+        thread: result.threadId,
+        files: result.gitChanges ? [...result.gitChanges.modifiedFiles, ...result.gitChanges.untrackedFiles] : void 0,
+        error: result.error,
+        response: result.response?.slice(0, 2e3)
+      });
+      settle(result);
+    };
     let stdoutBuffer = "";
     let stderr = "";
     let isTimedOut = false;
@@ -21857,6 +21972,7 @@ ${ORANGE}${BOLD2}\u{1F680} [Codex Worker Initialized]${RESET2} ${DIM2}in ${cwd} 
         process.stderr.write(`
 \x1B[31m\x1B[1m\u26D4 [Codex Usage/Quota Exhausted]\x1B[0m ${quotaErrorReason}
 `);
+        feed.emit("info", { level: "error", text: `Usage/quota exhausted: ${quotaErrorReason}` });
         clearTimeout(timer);
         proc.kill("SIGTERM");
         setTimeout(() => {
@@ -21880,6 +21996,7 @@ ${ORANGE}${BOLD2}\u{1F680} [Codex Worker Initialized]${RESET2} ${DIM2}in ${cwd} 
             threadId = parsed.thread_id;
             process.stderr.write(`${CYAN2}\u{1F9F5} [Codex Thread: ${threadId}]${RESET2}
 `);
+            feed.emit("info", { text: `thread ${threadId}` });
           } else if (parsed.type === "turn.started") {
             numTurns += 1;
           } else if (parsed.type === "turn.completed" && parsed.usage) {
@@ -21891,8 +22008,34 @@ ${ORANGE}${BOLD2}\u{1F680} [Codex Worker Initialized]${RESET2} ${DIM2}in ${cwd} 
               cached_input_tokens: u.cached_input_tokens,
               total_tokens: (u.input_tokens || 0) + (u.output_tokens || 0)
             };
+          } else if (parsed.type === "item.started" && parsed.item) {
+            const item = parsed.item;
+            if (item.type === "command_execution") {
+              feed.emit("tool", { name: "shell", detail: item.command });
+            } else if (item.type === "mcp_tool_call") {
+              feed.emit("tool", { name: `${item.server || "mcp"}.${item.tool || "tool"}` });
+            } else if (item.type === "web_search") {
+              feed.emit("tool", { name: "web_search", detail: item.query });
+            }
           } else if (parsed.type === "item.completed" && parsed.item) {
             const item = parsed.item;
+            if (item.type === "reasoning" && item.text) {
+              feed.emit("thinking", { text: item.text });
+            } else if (item.type === "agent_message" && item.text) {
+              feed.emit("message", { text: item.text });
+            } else if (item.type === "command_execution") {
+              feed.emit("tool_done", { name: "shell", exitCode: item.exit_code });
+            } else if (item.type === "mcp_tool_call") {
+              feed.emit("tool_done", { name: `${item.server || "mcp"}.${item.tool || "tool"}` });
+            } else if (item.type === "file_change" && Array.isArray(item.changes)) {
+              for (const change of item.changes) {
+                feed.emit("tool_done", { name: `file ${change.kind || "edit"}`, detail: change.path });
+              }
+            } else if (item.type === "todo_list" && Array.isArray(item.items)) {
+              feed.emit("info", {
+                text: item.items.map((t) => `${t.completed ? "\u2611" : "\u2610"} ${t.text}`).join("\n")
+              });
+            }
             if (item.type === "agent_message" && item.text) {
               accumulatedResponse = item.text;
               process.stderr.write(`${DIM2}${item.text}${RESET2}
@@ -21926,13 +22069,13 @@ ${ORANGE}${BOLD2}\u{1F680} [Codex Worker Initialized]${RESET2} ${DIM2}in ${cwd} 
       const durationSeconds = Math.round((Date.now() - startTime) / 100) / 10;
       let finalResponse = accumulatedResponse;
       try {
-        const fileContent = await fs.readFile(tempOutputFile, "utf-8");
+        const fileContent = await fs2.readFile(tempOutputFile, "utf-8");
         if (fileContent.trim()) {
           finalResponse = fileContent.trim();
         }
       } catch {
       } finally {
-        await fs.unlink(tempOutputFile).catch(() => {
+        await fs2.unlink(tempOutputFile).catch(() => {
         });
       }
       let gitChanges;
@@ -22004,9 +22147,9 @@ ${GREEN2}${BOLD2}\u2728 [Codex Finished]${RESET2} ${DIM2}Status: ${success ? "SU
 }
 
 // src/executor/chatgpt.ts
-import os3 from "node:os";
-import path3 from "node:path";
-import fs2 from "node:fs/promises";
+import os4 from "node:os";
+import path4 from "node:path";
+import fs3 from "node:fs/promises";
 var BOLD3 = "\x1B[1m";
 var DIM3 = "\x1B[2m";
 var RESET3 = "\x1B[0m";
@@ -22017,8 +22160,8 @@ async function resolveOpenAiApiKey() {
     return process.env.OPENAI_API_KEY.trim();
   }
   try {
-    const authPath = path3.join(os3.homedir(), ".codex", "auth.json");
-    const raw = await fs2.readFile(authPath, "utf-8");
+    const authPath = path4.join(os4.homedir(), ".codex", "auth.json");
+    const raw = await fs3.readFile(authPath, "utf-8");
     const parsed = JSON.parse(raw);
     if (typeof parsed.OPENAI_API_KEY === "string" && parsed.OPENAI_API_KEY.trim()) {
       return parsed.OPENAI_API_KEY.trim();
@@ -22043,7 +22186,8 @@ ${options.prompt}`;
       instructions: fullInstructions,
       model: options.model && (options.model.startsWith("gpt-5") || options.model.startsWith("codex")) ? options.model : "gpt-5.6-luna",
       timeoutSeconds: 300,
-      includeGitDiff: false
+      includeGitDiff: false,
+      feedAgent: "chatgpt"
     });
     return {
       success: codexResult.success,
@@ -22094,6 +22238,19 @@ ${userPrompt}`;
   process.stderr.write(`
 ${BLUE}${BOLD3}\u{1F4AC} [ChatGPT Consulting Initialized]${RESET3} ${DIM3}model: ${model}${RESET3}
 `);
+  const feed = createFeed("chatgpt");
+  feed.emit("start", { instructions: options.prompt, model });
+  const finish = (result) => {
+    if (result.success) feed.emit("message", { text: result.response });
+    feed.emit("finish", {
+      status: result.success ? "SUCCESS" : "FAILED",
+      success: result.success,
+      duration: result.durationSeconds,
+      tokens: result.usage?.total_tokens,
+      error: result.error
+    });
+    return result;
+  };
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -22115,13 +22272,13 @@ ${BLUE}${BOLD3}\u{1F4AC} [ChatGPT Consulting Initialized]${RESET3} ${DIM3}model:
       } catch {
         errMsg += `: ${errText.slice(0, 300)}`;
       }
-      return {
+      return finish({
         success: false,
         response: "",
         model,
         durationSeconds,
         error: errMsg
-      };
+      });
     }
     const json = await res.json();
     const choice = json.choices?.[0];
@@ -22138,22 +22295,22 @@ ${BLUE}${BOLD3}\u{1F4AC} [ChatGPT Consulting Initialized]${RESET3} ${DIM3}model:
 ${GREEN3}${BOLD3}\u2728 [ChatGPT Response Received]${RESET3} ${DIM3}Duration: ${durationSeconds}s, Tokens: ${usage.total_tokens || 0}${RESET3}
 `
     );
-    return {
+    return finish({
       success: true,
       response: content,
       model,
       durationSeconds,
       usage
-    };
+    });
   } catch (err) {
     const durationSeconds = Math.round((Date.now() - startTime) / 100) / 10;
-    return {
+    return finish({
       success: false,
       response: "",
       model,
       durationSeconds,
       error: `Failed to connect to OpenAI API: ${err.message}`
-    };
+    });
   }
 }
 async function runChatgptReview(options) {
@@ -22181,12 +22338,12 @@ Review the following code or git diff:` : "Review the following code or git diff
 }
 
 // src/utils/transcript.ts
-import fs3 from "node:fs/promises";
-import path4 from "node:path";
-import os4 from "node:os";
+import fs4 from "node:fs/promises";
+import path5 from "node:path";
+import os5 from "node:os";
 async function inspectTranscript(conversationId, maxSteps = 20) {
-  const homeDir = os4.homedir();
-  const transcriptPath = path4.join(
+  const homeDir = os5.homedir();
+  const transcriptPath = path5.join(
     homeDir,
     ".gemini",
     "antigravity-cli",
@@ -22197,7 +22354,7 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
     "transcript.jsonl"
   );
   try {
-    const content = await fs3.readFile(transcriptPath, "utf8");
+    const content = await fs4.readFile(transcriptPath, "utf8");
     const lines = content.trim().split("\n").filter(Boolean);
     const totalSteps = lines.length;
     const recentLines = lines.slice(-maxSteps);
@@ -22243,17 +22400,17 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
 }
 
 // src/utils/savings.ts
-import fs4 from "node:fs/promises";
-import path5 from "node:path";
-import os5 from "node:os";
+import fs5 from "node:fs/promises";
+import path6 from "node:path";
+import os6 from "node:os";
 function getStoragePath() {
-  const homeDir = os5.homedir();
-  return path5.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
+  const homeDir = os6.homedir();
+  return path6.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
 }
 async function loadStorage() {
   const filePath = getStoragePath();
   try {
-    const data = await fs4.readFile(filePath, "utf8");
+    const data = await fs5.readFile(filePath, "utf8");
     return JSON.parse(data);
   } catch {
     return {
@@ -22267,8 +22424,8 @@ async function loadStorage() {
 async function saveStorage(storage) {
   const filePath = getStoragePath();
   try {
-    await fs4.mkdir(path5.dirname(filePath), { recursive: true });
-    await fs4.writeFile(filePath, JSON.stringify(storage, null, 2), "utf8");
+    await fs5.mkdir(path6.dirname(filePath), { recursive: true });
+    await fs5.writeFile(filePath, JSON.stringify(storage, null, 2), "utf8");
   } catch {
   }
 }
@@ -22312,6 +22469,358 @@ async function getSavingsSummary() {
     overallSavingsPercentage: overallPct,
     recentTasks: storage.history.slice(-10)
   };
+}
+
+// src/cli/watch.ts
+import fs6 from "node:fs";
+import os7 from "node:os";
+var HELP = `agy-mcp watch: live view of Antigravity / Codex / ChatGPT subagent work
+
+Usage: agy-mcp watch [options]
+
+  (no options)       Replay tasks still running, then follow new activity
+  -n, --history N    Replay the last N tasks in full before following
+  -t, --task ID      Only show the task whose id starts with ID
+  -l, --list         List recent tasks and exit
+  -q, --quiet        Hide streamed agent text (show steps only)
+      --no-follow    Print and exit instead of following
+  -h, --help         Show this help
+
+Feed file: ${feedPath()}`;
+var useColor = process.stdout.isTTY && !process.env.NO_COLOR;
+var paint = (code) => (s) => useColor ? `\x1B[${code}m${s}\x1B[0m` : s;
+var bold = paint("1");
+var dim = paint("2");
+var red = paint("38;2;255;95;95");
+var green = paint("38;2;80;235;150");
+var yellow = paint("38;2;255;210;70");
+var AGENT_STYLE = {
+  antigravity: { label: "antigravity", color: paint("38;2;180;120;255"), icon: "\u{1F7E3}" },
+  codex: { label: "codex", color: paint("38;2;255;160;70"), icon: "\u{1F7E0}" },
+  chatgpt: { label: "chatgpt", color: paint("38;2;90;170;255"), icon: "\u{1F535}" }
+};
+function parseArgs(argv) {
+  const opts = { history: 0, list: false, quiet: false, follow: true };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "-h" || a === "--help") return null;
+    else if (a === "-n" || a === "--history") opts.history = Math.max(0, parseInt(argv[++i] || "0", 10) || 0);
+    else if (a === "-t" || a === "--task") opts.task = argv[++i];
+    else if (a === "-l" || a === "--list") opts.list = true;
+    else if (a === "-q" || a === "--quiet") opts.quiet = true;
+    else if (a === "--no-follow") opts.follow = false;
+    else {
+      process.stderr.write(`Unknown option: ${a}
+
+`);
+      return null;
+    }
+  }
+  return opts;
+}
+function readEvents(file) {
+  const events = [];
+  let liveBytes = 0;
+  for (const f of [`${file}.1`, file]) {
+    let raw;
+    try {
+      raw = fs6.readFileSync(f);
+    } catch {
+      continue;
+    }
+    let content = raw.toString("utf8");
+    if (f === file) {
+      const end = content.lastIndexOf("\n") + 1;
+      content = content.slice(0, end);
+      liveBytes = Buffer.byteLength(content);
+    }
+    for (const line of content.split("\n")) {
+      if (!line) continue;
+      try {
+        events.push(JSON.parse(line));
+      } catch {
+      }
+    }
+  }
+  return { events, liveBytes };
+}
+var shortId = (id) => id.slice(0, 8);
+var clock = (ts) => new Date(ts).toTimeString().slice(0, 8);
+var home = os7.homedir();
+var tildify = (p) => typeof p === "string" ? p.replace(home, "~") : "";
+function formatDuration(seconds) {
+  if (typeof seconds !== "number" || !isFinite(seconds)) return "";
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const m = Math.floor(seconds / 60);
+  return `${m}m ${Math.round(seconds - m * 60)}s`;
+}
+var Renderer = class {
+  constructor(quiet) {
+    this.quiet = quiet;
+    process.stdout.on?.("resize", () => {
+      this.width = Math.max(40, (process.stdout.columns || 100) - 4);
+    });
+  }
+  threads = /* @__PURE__ */ new Map();
+  lastTask = null;
+  width = Math.max(40, (process.stdout.columns || 100) - 4);
+  get running() {
+    return this.threads.size;
+  }
+  style(agent) {
+    return AGENT_STYLE[agent] || { label: agent, color: (s) => s, icon: "\u26AA" };
+  }
+  gutter(task) {
+    const t = this.threads.get(task);
+    return this.style(t?.agent || "").color("\u2502");
+  }
+  line(task, text) {
+    const g = this.gutter(task);
+    for (const raw of text.split("\n")) {
+      let rest = raw;
+      do {
+        process.stdout.write(`${g} ${rest.slice(0, this.width)}
+`);
+        rest = rest.slice(this.width);
+      } while (rest.length > 0);
+    }
+  }
+  // When several tasks run at once, mark which thread the next lines belong to
+  switchTo(task) {
+    if (this.lastTask === task) return;
+    const t = this.threads.get(task);
+    if (this.lastTask !== null && t) {
+      const s = this.style(t.agent);
+      process.stdout.write(`${s.color("\u21B3")} ${dim(`${s.label} ${shortId(task)}`)}
+`);
+    }
+    this.lastTask = task;
+  }
+  flushPartial(task) {
+    const t = this.threads.get(task);
+    if (t?.partial) {
+      this.line(task, dim(t.partial));
+      t.partial = "";
+    }
+  }
+  // Called on a timer while following: a quiet task gets a "still working" reply every 30s
+  heartbeat(now) {
+    for (const [task, t] of this.threads) {
+      if (now - t.lastSeen < 3e4) continue;
+      if (now - t.start > 2 * 60 * 60 * 1e3) continue;
+      this.flushPartial(task);
+      this.switchTo(task);
+      this.line(task, dim(`\u23F3 still working \xB7 ${formatDuration((now - t.start) / 1e3)} elapsed`));
+      t.lastSeen = now;
+    }
+  }
+  handle(e) {
+    if (e.kind === "start") {
+      this.threads.set(e.task, { agent: e.agent, start: e.ts, partial: "", lastSeen: e.ts });
+      const s = this.style(e.agent);
+      const meta = [e.model, e.effort, e.mode].filter(Boolean).join(" \xB7 ");
+      const resumed = e.conversation || e.thread ? dim(" (continued)") : "";
+      process.stdout.write(
+        `
+${s.color("\u250C")} ${s.icon} ${bold(s.color(s.label))} ${dim(shortId(e.task))}  ${dim(clock(e.ts))}${resumed}
+`
+      );
+      this.lastTask = e.task;
+      if (e.workspace) this.line(e.task, dim(`\u{1F4C1} ${tildify(e.workspace)}${meta ? `   ${meta}` : ""}`));
+      else if (meta) this.line(e.task, dim(meta));
+      const instructions = String(e.instructions || "").trim().split("\n").filter(Boolean);
+      const preview = instructions.slice(0, 4).map((l) => l.length > this.width - 4 ? l.slice(0, this.width - 5) + "\u2026" : l);
+      for (const l of preview) this.line(e.task, `${bold("\u203A")} ${l}`);
+      if (instructions.length > 4) this.line(e.task, dim(`  \u2026 ${instructions.length - 4} more lines`));
+      this.line(e.task, `${yellow("\u{1F440}")} ${dim("working\u2026")}`);
+      return;
+    }
+    if (!this.threads.has(e.task)) {
+      if (e.kind === "finish") return;
+      this.threads.set(e.task, { agent: e.agent, start: e.ts, partial: "", lastSeen: e.ts });
+      const s = this.style(e.agent);
+      process.stdout.write(`
+${s.color("\u250C")} ${s.icon} ${bold(s.color(s.label))} ${dim(shortId(e.task))}  ${dim("(joined mid-task)")}
+`);
+      this.lastTask = e.task;
+    }
+    this.switchTo(e.task);
+    const t = this.threads.get(e.task);
+    t.lastSeen = e.ts;
+    const elapsed = dim(`+${formatDuration((e.ts - t.start) / 1e3)}`);
+    switch (e.kind) {
+      case "text": {
+        if (this.quiet) return;
+        const text = t.partial + String(e.text || "");
+        const lines = text.split("\n");
+        t.partial = lines.pop() || "";
+        for (const l of lines) this.line(e.task, dim(l));
+        return;
+      }
+      case "thinking": {
+        this.flushPartial(e.task);
+        const parts = [
+          typeof e.tokens === "number" ? `${e.tokens.toLocaleString()} tokens` : "",
+          formatDuration(e.duration)
+        ].filter(Boolean);
+        this.line(e.task, `\u{1F9E0} ${paint("38;2;80;220;255")("thinking")} ${dim(parts.join(" \xB7 "))} ${elapsed}`);
+        if (e.text && !this.quiet) {
+          const text = String(e.text).trim();
+          this.line(e.task, dim(text.length > 400 ? text.slice(0, 400) + "\u2026" : text));
+        }
+        return;
+      }
+      case "tool": {
+        this.flushPartial(e.task);
+        const detail = e.detail ? ` ${dim(String(e.detail).split("\n")[0].slice(0, 160))}` : "";
+        this.line(e.task, `\u26A1 ${yellow(String(e.name))}${detail} ${elapsed}`);
+        return;
+      }
+      case "tool_done": {
+        this.flushPartial(e.task);
+        const failed = typeof e.exitCode === "number" && e.exitCode !== 0;
+        const mark = failed ? red(`\u2717 exit ${e.exitCode}`) : green("\u2713");
+        const detail = e.detail ? ` ${dim(String(e.detail))}` : "";
+        const dur = e.duration ? dim(` ${formatDuration(e.duration)}`) : "";
+        this.line(e.task, `   ${mark} ${dim(String(e.name))}${detail}${dur}`);
+        return;
+      }
+      case "message": {
+        this.flushPartial(e.task);
+        if (this.quiet) return;
+        this.line(e.task, `\u{1F4AC} ${String(e.text || "").trim()}`);
+        return;
+      }
+      case "info": {
+        this.flushPartial(e.task);
+        const text = String(e.text || "");
+        this.line(e.task, e.level === "error" ? red(`\u26D4 ${text}`) : dim(`\u2139 ${text}`));
+        return;
+      }
+      case "finish": {
+        this.flushPartial(e.task);
+        const s = this.style(t.agent);
+        const ok = e.success === true;
+        const status = String(e.status || (ok ? "SUCCESS" : "FAILED"));
+        const duration3 = formatDuration(typeof e.duration === "number" ? e.duration : (e.ts - t.start) / 1e3);
+        const facts = [
+          duration3,
+          typeof e.tokens === "number" && e.tokens > 0 ? `${e.tokens.toLocaleString()} tokens` : "",
+          Array.isArray(e.files) && e.files.length ? `${e.files.length} file${e.files.length === 1 ? "" : "s"} changed` : ""
+        ].filter(Boolean);
+        if (Array.isArray(e.files) && e.files.length) {
+          for (const f of e.files.slice(0, 12)) this.line(e.task, dim(`   \xB1 ${f}`));
+          if (e.files.length > 12) this.line(e.task, dim(`   \u2026 ${e.files.length - 12} more`));
+        }
+        if (!ok && e.error) this.line(e.task, red(String(e.error).slice(0, 500)));
+        const mark = ok ? green(`\u2705 ${status}`) : red(`\u26A0\uFE0F  ${status}`);
+        process.stdout.write(`${s.color("\u2514")} ${mark} ${dim(facts.join(" \xB7 "))}
+`);
+        this.threads.delete(e.task);
+        this.lastTask = "";
+        return;
+      }
+    }
+  }
+};
+function listTasks(events) {
+  const tasks = /* @__PURE__ */ new Map();
+  for (const e of events) {
+    const t = tasks.get(e.task) || { steps: 0, last: e.ts };
+    if (e.kind === "start") t.start = e;
+    else if (e.kind === "finish") t.finish = e;
+    else if (e.kind === "tool") t.steps++;
+    t.last = e.ts;
+    tasks.set(e.task, t);
+  }
+  const rows = [...tasks.entries()].slice(-25);
+  if (rows.length === 0) {
+    process.stdout.write(dim("No tasks recorded yet.\n"));
+    return;
+  }
+  for (const [id, t] of rows) {
+    const agent = t.start?.agent || t.finish?.agent || "?";
+    const s = AGENT_STYLE[agent] || { color: (x) => x, icon: "\u26AA", label: agent };
+    const label = String(t.finish ? t.finish.status : "RUNNING").padEnd(22);
+    const status = t.finish ? t.finish.success ? green(label) : red(label) : yellow(label);
+    const when = t.start ? clock(t.start.ts) : clock(t.last);
+    const what = String(t.start?.instructions || "").trim().split("\n")[0].slice(0, 70);
+    process.stdout.write(`${s.icon} ${dim(shortId(id))}  ${dim(when)}  ${s.color(agent.padEnd(11))} ${status} ${what}
+`);
+  }
+}
+function follow(file, fromOffset, onEvent) {
+  let offset = fromOffset;
+  let carry = "";
+  const tick = () => {
+    let size;
+    try {
+      size = fs6.statSync(file).size;
+    } catch {
+      return;
+    }
+    if (size < offset) {
+      offset = 0;
+      carry = "";
+    }
+    if (size === offset) return;
+    const fd = fs6.openSync(file, "r");
+    try {
+      const buf = Buffer.alloc(size - offset);
+      fs6.readSync(fd, buf, 0, buf.length, offset);
+      offset = size;
+      const lines = (carry + buf.toString("utf8")).split("\n");
+      carry = lines.pop() || "";
+      for (const line of lines) {
+        if (!line) continue;
+        try {
+          onEvent(JSON.parse(line));
+        } catch {
+        }
+      }
+    } finally {
+      fs6.closeSync(fd);
+    }
+  };
+  setInterval(tick, 250);
+}
+async function runWatch(argv) {
+  const opts = parseArgs(argv);
+  if (!opts) {
+    process.stdout.write(HELP + "\n");
+    return;
+  }
+  const file = feedPath();
+  const { events, liveBytes } = readEvents(file);
+  if (opts.list) {
+    listTasks(events);
+    return;
+  }
+  const match = (e) => !opts.task || e.task.startsWith(opts.task);
+  const renderer = new Renderer(opts.quiet);
+  const finished = new Set(events.filter((e) => e.kind === "finish").map((e) => e.task));
+  const staleBefore = Date.now() - 2 * 60 * 60 * 1e3;
+  const starts = events.filter((e) => e.kind === "start" && match(e));
+  const replay = /* @__PURE__ */ new Set();
+  for (const s of starts) {
+    if (!finished.has(s.task) && s.ts > staleBefore) replay.add(s.task);
+  }
+  if (opts.history > 0) for (const s of starts.slice(-opts.history)) replay.add(s.task);
+  if (opts.task) for (const s of starts) replay.add(s.task);
+  for (const e of events) if (replay.has(e.task)) renderer.handle(e);
+  if (!opts.follow) return;
+  const running = renderer.running;
+  process.stdout.write(
+    dim(`
+\u23F3 watching ${tildify(file)}${running ? ` \xB7 ${running} running` : ""} \xB7 ctrl+c to exit
+`)
+  );
+  follow(file, liveBytes, (e) => {
+    if (match(e)) renderer.handle(e);
+  });
+  setInterval(() => renderer.heartbeat(Date.now()), 5e3);
+  await new Promise(() => {
+  });
 }
 
 // src/server/stdio.ts
@@ -22411,7 +22920,7 @@ function handleCheckTask(taskId) {
 }
 var server = new McpServer({
   name: "omni-bridge",
-  version: "1.4.0"
+  version: "1.5.0"
 });
 server.tool(
   "agy_execute",
@@ -22428,7 +22937,7 @@ server.tool(
   },
   async (args) => {
     if (args.async) {
-      const taskId = randomUUID2();
+      const taskId = randomUUID3();
       const task = {
         id: taskId,
         agent: "antigravity",
@@ -22440,6 +22949,7 @@ server.tool(
       };
       backgroundTasks.set(taskId, task);
       runAgy({
+        taskId,
         instructions: args.instructions,
         workspaceDir: args.workspace_dir,
         effort: args.effort,
@@ -22545,7 +23055,7 @@ server.tool(
   },
   async (args) => {
     if (args.async) {
-      const taskId = randomUUID2();
+      const taskId = randomUUID3();
       const task = {
         id: taskId,
         agent: "antigravity",
@@ -22557,6 +23067,7 @@ server.tool(
       };
       backgroundTasks.set(taskId, task);
       runAgy({
+        taskId,
         conversationId: args.conversation_id,
         instructions: args.instructions,
         workspaceDir: args.workspace_dir,
@@ -22756,7 +23267,7 @@ server.tool(
   },
   async (args) => {
     if (args.async) {
-      const taskId = randomUUID2();
+      const taskId = randomUUID3();
       const task = {
         id: taskId,
         agent: "codex",
@@ -22768,6 +23279,7 @@ server.tool(
       };
       backgroundTasks.set(taskId, task);
       runCodex({
+        taskId,
         instructions: args.instructions,
         workspaceDir: args.workspace_dir,
         model: args.model,
@@ -22867,7 +23379,7 @@ server.tool(
   },
   async (args) => {
     if (args.async) {
-      const taskId = randomUUID2();
+      const taskId = randomUUID3();
       const task = {
         id: taskId,
         agent: "codex",
@@ -22879,6 +23391,7 @@ server.tool(
       };
       backgroundTasks.set(taskId, task);
       runCodex({
+        taskId,
         threadId: args.thread_id,
         instructions: args.instructions,
         workspaceDir: args.workspace_dir,
@@ -23093,6 +23606,10 @@ server.tool(
   }
 );
 async function main() {
+  if (process.argv[2] === "watch") {
+    await runWatch(process.argv.slice(3));
+    return;
+  }
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

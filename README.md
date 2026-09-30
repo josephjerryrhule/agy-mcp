@@ -1,6 +1,6 @@
 # Omni-Bridge (`agy-mcp`)
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/josephjerryrhule/agy-mcp/releases)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/josephjerryrhule/agy-mcp/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](package.json)
 
@@ -170,6 +170,33 @@ Large coding tasks quickly exhaust Claude's context window. Instead of loading d
   * `model` *(string, default: `'o3-mini'`)*
 
 ---
+
+## 👀 Live Watch: See Subagent Work in Your Shell
+
+The MCP client swallows the server's stderr, so only Claude sees what a subagent is doing. Every Antigravity, Codex, and ChatGPT task also writes structured events to `~/.agy-mcp/live.jsonl`, and `watch` renders them as threads in any terminal: one thread per task, with its instructions, thinking steps, tool calls, streamed replies, changed files, and a closing status.
+
+```bash
+npx -y agy-mcp watch            # replay running tasks, then follow live
+npx -y agy-mcp watch -n 3       # also replay the last 3 tasks in full
+npx -y agy-mcp watch -t 306388  # one task (id prefix, same id agy_check_task uses)
+npx -y agy-mcp watch -q         # steps only, hide streamed text
+npx -y agy-mcp watch --list     # table of recent tasks and exit
+```
+
+```
+┌ 🟣 antigravity 306388aa  14:02:11
+│ 📁 ~/Desktop/dev/site   high · accept-edits
+│ › Refactor the auth middleware and add expiry tests
+│ 👀 working…
+│ 🧠 thinking 1,204 tokens · 3.1s +4.0s
+│ ⚡ view_file src/auth.ts +6.2s
+│    ✓ view_file 0.1s
+│ I'll update the middleware now.
+│    ± src/auth.ts
+└ ✅ SUCCESS 42.8s · 46,963 tokens · 1 file changed
+```
+
+When several tasks run at once, a `↳ agent id` marker shows which thread the next lines belong to. Set `AGY_MCP_FEED_DIR` to move the feed; it rotates at 20 MB.
 
 ## 📋 Recommended Rules for `CLAUDE.md`
 

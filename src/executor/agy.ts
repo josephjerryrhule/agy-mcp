@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import path from 'node:path'
 import os from 'node:os'
 import { getGitSummary, type GitSummary } from '../utils/git.js'
+import { createFeed } from '../utils/livefeed.js'
 
 export interface AgyExecuteOptions {
   instructions: string
@@ -13,6 +14,8 @@ export interface AgyExecuteOptions {
   timeoutSeconds?: number
   includeGitDiff?: boolean
   onStreamEvent?: (event: any) => void
+  // Id shown in the live feed; pass the background task id so `watch` and agy_check_task agree
+  taskId?: string
 }
 
 export interface AgyUsage {
@@ -114,7 +117,32 @@ ${options.instructions}`
     args.push('--model', options.model)
   }
 
-  return new Promise<AgyExecuteResult>((resolve) => {
+  const feed = createFeed('antigravity', options.taskId)
+  feed.emit('start', {
+    instructions: options.instructions,
+    workspace: cwd,
+    model: options.model,
+    effort: options.effort,
+    mode,
+    conversation: options.conversationId,
+  })
+
+  return new Promise<AgyExecuteResult>((settle) => {
+    const resolve = (result: AgyExecuteResult) => {
+      feed.emit('finish', {
+        status: result.status,
+        success: result.success,
+        duration: result.durationSeconds,
+        tokens: result.usage?.total_tokens,
+        conversation: result.conversationId,
+        files: result.gitChanges
+          ? [...result.gitChanges.modifiedFiles, ...result.gitChanges.untrackedFiles]
+          : undefined,
+        error: result.error,
+        response: result.response?.slice(0, 2000),
+      })
+      settle(result)
+    }
     let stdoutBuffer = ''
     let stderr = ''
     let isTimedOut = false
@@ -160,6 +188,7 @@ ${options.instructions}`
         isQuotaExhausted = true
         quotaErrorReason = text.trim().slice(0, 400)
         process.stderr.write(`\n\x1b[31m\x1b[1m⛔ [Antigravity Usage/Quota Exhausted]\x1b[0m ${quotaErrorReason}\n`)
+        feed.emit('info', { level: 'error', text: `Usage/quota exhausted: ${quotaErrorReason}` })
         clearTimeout(timer)
         proc.kill('SIGTERM')
         setTimeout(() => {
@@ -194,6 +223,7 @@ ${options.instructions}`
                     step.duration_seconds ? ` in ${step.duration_seconds.toFixed(1)}s` : ''
                   }${RESET}\n`
                 )
+                feed.emit('thinking', { tokens: thinking, duration: step.duration_seconds })
                 executionTrace.push({
                   stepIndex: idx,
                   type: 'thinking',
@@ -203,6 +233,7 @@ ${options.instructions}`
               }
               if (step.text_delta) {
                 process.stderr.write(`${DIM}${step.text_delta}${RESET}`)
+                feed.text(step.text_delta)
               }
             } else if (step.step_type === 'tool') {
               const toolName = step.tool_name || step.tool_info?.name || 'unknown_tool'
@@ -220,12 +251,14 @@ ${options.instructions}`
                 process.stderr.write(
                   `${YELLOW}⚡ [Antigravity Tool: ${toolName}]${RESET} ${DIM}${paramPreview}${RESET}\n`
                 )
+                feed.emit('tool', { name: toolName, detail: paramPreview ? String(paramPreview) : undefined })
               } else if (step.state === 'DONE') {
                 process.stderr.write(
                   `${GREEN}✅ [Tool Completed]${RESET} ${DIM}${toolName}${
                     step.duration_seconds ? ` (${step.duration_seconds.toFixed(2)}s)` : ''
                   }${RESET}\n`
                 )
+                feed.emit('tool_done', { name: toolName, duration: step.duration_seconds })
                 executionTrace.push({
                   stepIndex: idx,
                   type: 'tool',
