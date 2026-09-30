@@ -395,3 +395,83 @@ export async function runWatch(argv: string[]): Promise<void> {
 
   await new Promise<void>(() => {})
 }
+
+// `agy-mcp status`: one line per running task, for the Claude Code statusline.
+// Reads only the tail of the feed so it stays fast on every statusline refresh.
+export async function runStatus(): Promise<void> {
+  const file = feedPath()
+  let text = ''
+  try {
+    const size = fs.statSync(file).size
+    const len = Math.min(size, 1024 * 1024)
+    const buf = Buffer.alloc(len)
+    const fd = fs.openSync(file, 'r')
+    try {
+      fs.readSync(fd, buf, 0, len, size - len)
+    } finally {
+      fs.closeSync(fd)
+    }
+    text = buf.toString('utf8')
+  } catch {
+    return
+  }
+
+  interface Running {
+    agent: string
+    start: number
+    lastSeen: number
+    workspace?: string
+    activity: string
+    steps: number
+  }
+  const running = new Map<string, Running>()
+  for (const line of text.split('\n')) {
+    let e: FeedEvent
+    try {
+      e = JSON.parse(line)
+    } catch {
+      continue
+    }
+    if (e.kind === 'finish') {
+      running.delete(e.task)
+      continue
+    }
+    let r = running.get(e.task)
+    if (!r) {
+      r = { agent: e.agent, start: e.ts, lastSeen: e.ts, activity: 'starting', steps: 0 }
+      running.set(e.task, r)
+    }
+    r.lastSeen = e.ts
+    if (e.kind === 'start') {
+      r.start = e.ts
+      r.workspace = typeof e.workspace === 'string' ? e.workspace : undefined
+    } else if (e.kind === 'tool') {
+      r.steps++
+      const detail = e.detail ? ' ' + String(e.detail).split('\n')[0].replace(home, '~') : ''
+      r.activity = `⚡ ${e.name}${detail}`
+    } else if (e.kind === 'tool_done') {
+      r.activity = `✓ ${e.name}`
+    } else if (e.kind === 'thinking') {
+      r.activity = '🧠 thinking'
+    } else if (e.kind === 'text' || e.kind === 'message') {
+      r.activity = '💬 writing'
+    }
+  }
+
+  const now = Date.now()
+  // A task silent for 20 minutes is treated as orphaned (its MCP server was likely killed)
+  const live = [...running.entries()].filter(([, r]) => now - r.lastSeen < 20 * 60 * 1000)
+  const color = (code: string) => (s: string) => `\x1b[${code}m${s}\x1b[0m`
+  const d = color('2')
+  const b = color('1')
+  for (const [task, r] of live.slice(-3)) {
+    const st = AGENT_STYLE[r.agent] || { label: r.agent, color: (x: string) => x, icon: '⚪' }
+    const project = r.workspace ? r.workspace.split('/').filter(Boolean).pop() : ''
+    const activity = r.activity.length > 60 ? r.activity.slice(0, 59) + '…' : r.activity
+    const facts = [formatDuration(Math.round((now - r.start) / 1000)), r.steps ? `${r.steps} steps` : ''].filter(Boolean)
+    process.stdout.write(
+      `${st.icon} ${b(st.color(st.label))} ${d(task.slice(0, 8))}${project ? ` ${b(project)}` : ''} ${activity} ${d('· ' + facts.join(' · '))}\n`
+    )
+  }
+  if (live.length > 3) process.stdout.write(d(`   +${live.length - 3} more running · agywatch for details`) + '\n')
+}

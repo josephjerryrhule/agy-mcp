@@ -22822,6 +22822,73 @@ async function runWatch(argv) {
   await new Promise(() => {
   });
 }
+async function runStatus() {
+  const file = feedPath();
+  let text = "";
+  try {
+    const size = fs6.statSync(file).size;
+    const len = Math.min(size, 1024 * 1024);
+    const buf = Buffer.alloc(len);
+    const fd = fs6.openSync(file, "r");
+    try {
+      fs6.readSync(fd, buf, 0, len, size - len);
+    } finally {
+      fs6.closeSync(fd);
+    }
+    text = buf.toString("utf8");
+  } catch {
+    return;
+  }
+  const running = /* @__PURE__ */ new Map();
+  for (const line of text.split("\n")) {
+    let e;
+    try {
+      e = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (e.kind === "finish") {
+      running.delete(e.task);
+      continue;
+    }
+    let r = running.get(e.task);
+    if (!r) {
+      r = { agent: e.agent, start: e.ts, lastSeen: e.ts, activity: "starting", steps: 0 };
+      running.set(e.task, r);
+    }
+    r.lastSeen = e.ts;
+    if (e.kind === "start") {
+      r.start = e.ts;
+      r.workspace = typeof e.workspace === "string" ? e.workspace : void 0;
+    } else if (e.kind === "tool") {
+      r.steps++;
+      const detail = e.detail ? " " + String(e.detail).split("\n")[0].replace(home, "~") : "";
+      r.activity = `\u26A1 ${e.name}${detail}`;
+    } else if (e.kind === "tool_done") {
+      r.activity = `\u2713 ${e.name}`;
+    } else if (e.kind === "thinking") {
+      r.activity = "\u{1F9E0} thinking";
+    } else if (e.kind === "text" || e.kind === "message") {
+      r.activity = "\u{1F4AC} writing";
+    }
+  }
+  const now = Date.now();
+  const live = [...running.entries()].filter(([, r]) => now - r.lastSeen < 20 * 60 * 1e3);
+  const color = (code) => (s) => `\x1B[${code}m${s}\x1B[0m`;
+  const d = color("2");
+  const b = color("1");
+  for (const [task, r] of live.slice(-3)) {
+    const st = AGENT_STYLE[r.agent] || { label: r.agent, color: (x) => x, icon: "\u26AA" };
+    const project = r.workspace ? r.workspace.split("/").filter(Boolean).pop() : "";
+    const activity = r.activity.length > 60 ? r.activity.slice(0, 59) + "\u2026" : r.activity;
+    const facts = [formatDuration(Math.round((now - r.start) / 1e3)), r.steps ? `${r.steps} steps` : ""].filter(Boolean);
+    process.stdout.write(
+      `${st.icon} ${b(st.color(st.label))} ${d(task.slice(0, 8))}${project ? ` ${b(project)}` : ""} ${activity} ${d("\xB7 " + facts.join(" \xB7 "))}
+`
+    );
+  }
+  if (live.length > 3) process.stdout.write(d(`   +${live.length - 3} more running \xB7 agywatch for details`) + "\n");
+}
 
 // src/server/stdio.ts
 var execAsync2 = promisify2(exec2);
@@ -23608,6 +23675,10 @@ server.tool(
 async function main() {
   if (process.argv[2] === "watch") {
     await runWatch(process.argv.slice(3));
+    return;
+  }
+  if (process.argv[2] === "status") {
+    await runStatus();
     return;
   }
   const transport = new StdioServerTransport();

@@ -10,7 +10,7 @@ import { runCodex } from '../executor/codex.js';
 import { runChatgptConsult, runChatgptReview } from '../executor/chatgpt.js';
 import { inspectTranscript } from '../utils/transcript.js';
 import { calculateAndRecordSavings, getSavingsSummary } from '../utils/savings.js';
-import { runWatch } from '../cli/watch.js';
+import { runWatch, runStatus } from '../cli/watch.js';
 const execAsync = promisify(exec);
 const backgroundTasks = new Map();
 function formatPayload(result, savings, customConversationId, workerName = 'antigravity') {
@@ -690,6 +690,10 @@ server.tool('chatgpt_review', 'Requests an adversarial code review from ChatGPT 
 async function main() {
     if (process.argv[2] === 'watch') {
         await runWatch(process.argv.slice(3));
+        return;
+    }
+    if (process.argv[2] === 'status') {
+        await runStatus();
         return;
     }
     const transport = new StdioServerTransport();
