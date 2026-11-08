@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto'
 import { runAgy, getEnhancedPath } from '../executor/agy.js'
 import { runCodex } from '../executor/codex.js'
 import { runChatgptConsult, runChatgptReview } from '../executor/chatgpt.js'
+import { runLocalChat, listLocalModels } from '../executor/local.js'
 import { inspectTranscript } from '../utils/transcript.js'
 import { calculateAndRecordSavings, getSavingsSummary } from '../utils/savings.js'
 import { runWatch, runStatus } from '../cli/watch.js'
@@ -898,6 +899,41 @@ server.tool(
       ],
     }
   }
+)
+
+// Tool 13: local_llm_chat
+server.tool(
+  'local_llm_chat',
+  "Asks the free, private local model (Gemma 4 on Joseph's home server, via Ollama). Good for summaries, drafts, tagging, describing images and questions about Joseph's own work (set use_notes). CPU only, so slow: short answers take 10 to 60 seconds. Use for volume or private material, not for hard reasoning.",
+  {
+    prompt: z.string().describe('The question or task for the local model.'),
+    context: z.string().optional().describe('Optional text to work on (notes, code, transcript).'),
+    system_prompt: z.string().optional().describe('Optional system instruction.'),
+    images: z.array(z.string()).optional().describe('Optional image file paths on the home server (~ allowed) for the model to look at.'),
+    use_notes: z.boolean().optional().default(false).describe("Search Joseph's notes index (memory, project docs, session digests) first and ground the answer in it."),
+    model: z.string().optional().describe('Ollama model name. Default gemma4-e2b.'),
+    max_tokens: z.number().optional().describe('Maximum answer length in tokens (default 1024).'),
+  },
+  async (args) => {
+    const result = await runLocalChat({
+      prompt: args.prompt,
+      context: args.context,
+      systemPrompt: args.system_prompt,
+      images: args.images,
+      useNotes: args.use_notes,
+      model: args.model,
+      maxTokens: args.max_tokens,
+    })
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  }
+)
+
+// Tool 14: local_llm_models
+server.tool(
+  'local_llm_models',
+  "Lists the models installed on Joseph's home server (Ollama), with size and capabilities.",
+  {},
+  async () => ({ content: [{ type: 'text', text: JSON.stringify(await listLocalModels(), null, 2) }] })
 )
 
 async function main() {

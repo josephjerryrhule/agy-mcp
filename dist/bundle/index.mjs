@@ -3259,8 +3259,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path7) {
-      let input = path7;
+    function removeDotSegments(path8) {
+      let input = path8;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3669,8 +3669,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path7 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path7 && path7 !== "/" ? path7 : void 0;
+        const path8 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path8 && path8 !== "/" ? path8 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -7182,12 +7182,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs7, exportName) {
+    function addFormats(ajv, list, fs8, exportName) {
       var _a;
       var _b;
       (_a = (_b = ajv.opts.code).formats) !== null && _a !== void 0 ? _a : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs7[f]);
+        ajv.addFormat(f, fs8[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7673,8 +7673,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path8, errorMaps, issueData } = params;
+  const fullPath = [...path8, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7790,11 +7790,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key) {
+  constructor(parent, value, path8, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path8;
     this._key = key;
   }
   get path() {
@@ -11432,10 +11432,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path7) {
-  if (!path7)
+function getElementAtPath(obj, path8) {
+  if (!path8)
     return obj;
-  return path7.reduce((acc, key) => acc?.[key], obj);
+  return path8.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11755,11 +11755,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path7, issues) {
+function prefixIssues(path8, issues) {
   return issues.map((iss) => {
     var _a;
     (_a = iss).path ?? (_a.path = []);
-    iss.path.unshift(path7);
+    iss.path.unshift(path8);
     return iss;
   });
 }
@@ -15172,11 +15172,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path7) {
-  if (path7.length === 0) {
+function getDotPath(path8) {
+  if (path8.length === 0) {
     return "object root";
   }
-  return path7.reduce((acc, seg, index) => {
+  return path8.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -21434,7 +21434,7 @@ var StdioServerTransport = class {
 
 // src/server/stdio.ts
 import { exec as exec2 } from "node:child_process";
-import { promisify as promisify2 } from "node:util";
+import { promisify as promisify3 } from "node:util";
 import { randomUUID as randomUUID3 } from "node:crypto";
 
 // src/executor/agy.ts
@@ -22337,13 +22337,103 @@ Review the following code or git diff:` : "Review the following code or git diff
   });
 }
 
-// src/utils/transcript.ts
-import fs4 from "node:fs/promises";
-import path5 from "node:path";
+// src/executor/local.ts
 import os5 from "node:os";
+import path5 from "node:path";
+import fs4 from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify as promisify2 } from "node:util";
+var execFileAsync = promisify2(execFile);
+var OLLAMA_URL = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
+var DEFAULT_MODEL = process.env.LOCAL_LLM_MODEL || "gemma4-e2b";
+var RECALL_DIR = process.env.RECALL_DIR || path5.join(os5.homedir(), "ai", "recall");
+async function searchNotes(query, k = 6) {
+  const { stdout } = await execFileAsync(
+    "uv",
+    ["run", "-q", "--project", RECALL_DIR, "python", path5.join(RECALL_DIR, "cli.py"), "search", query, "-k", String(k)],
+    { timeout: 12e4, maxBuffer: 4 * 1024 * 1024, env: { ...process.env, PATH: `${os5.homedir()}/.local/bin:/home/linuxbrew/.linuxbrew/bin:${process.env.PATH ?? ""}` } }
+  );
+  const paths = [...stdout.matchAll(/^\d\.\d{3}\s+(\S+)/gm)].map((m) => m[1]);
+  return { text: stdout.trim(), paths };
+}
+async function imageToBase64(p) {
+  const full = p.startsWith("~") ? path5.join(os5.homedir(), p.slice(1)) : p;
+  return (await fs4.readFile(full)).toString("base64");
+}
+async function runLocalChat(opts) {
+  const model = opts.model || DEFAULT_MODEL;
+  const started = Date.now();
+  try {
+    let notes;
+    if (opts.useNotes) notes = await searchNotes(opts.prompt);
+    const system = [
+      opts.systemPrompt || "You are Joseph's private assistant running on his home server. Be concise and practical.",
+      notes ? `Relevant notes from Joseph's memory and project docs (cite paths when you use them):
+${notes.text}` : ""
+    ].filter(Boolean).join("\n\n");
+    const user = opts.context ? `${opts.prompt}
+
+Context:
+${opts.context}` : opts.prompt;
+    const images = opts.images?.length ? await Promise.all(opts.images.map(imageToBase64)) : void 0;
+    const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model,
+        stream: false,
+        think: opts.think ?? false,
+        keep_alive: "30m",
+        options: { num_predict: opts.maxTokens ?? 1024, num_ctx: 16384 },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user, ...images ? { images } : {} }
+        ]
+      }),
+      signal: AbortSignal.timeout(15 * 6e4)
+    });
+    if (!res.ok) throw new Error(`Ollama returned ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const data = await res.json();
+    const evalSec = (data.eval_duration ?? 0) / 1e9;
+    return {
+      success: true,
+      response: (data.message?.content ?? "").trim(),
+      model,
+      durationSeconds: Math.round((Date.now() - started) / 100) / 10,
+      tokens: {
+        prompt: data.prompt_eval_count,
+        output: data.eval_count,
+        outputPerSecond: evalSec ? Math.round(data.eval_count / evalSec * 10) / 10 : void 0
+      },
+      notesUsed: notes?.paths
+    };
+  } catch (e) {
+    return {
+      success: false,
+      response: "",
+      model,
+      durationSeconds: Math.round((Date.now() - started) / 100) / 10,
+      error: e instanceof Error ? e.message : String(e)
+    };
+  }
+}
+async function listLocalModels() {
+  const res = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(15e3) });
+  const data = await res.json();
+  return (data.models ?? []).map((m) => ({
+    name: m.name,
+    sizeGB: Math.round(m.size / 1e9 * 10) / 10,
+    capabilities: m.capabilities
+  }));
+}
+
+// src/utils/transcript.ts
+import fs5 from "node:fs/promises";
+import path6 from "node:path";
+import os6 from "node:os";
 async function inspectTranscript(conversationId, maxSteps = 20) {
-  const homeDir = os5.homedir();
-  const transcriptPath = path5.join(
+  const homeDir = os6.homedir();
+  const transcriptPath = path6.join(
     homeDir,
     ".gemini",
     "antigravity-cli",
@@ -22354,7 +22444,7 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
     "transcript.jsonl"
   );
   try {
-    const content = await fs4.readFile(transcriptPath, "utf8");
+    const content = await fs5.readFile(transcriptPath, "utf8");
     const lines = content.trim().split("\n").filter(Boolean);
     const totalSteps = lines.length;
     const recentLines = lines.slice(-maxSteps);
@@ -22400,17 +22490,17 @@ async function inspectTranscript(conversationId, maxSteps = 20) {
 }
 
 // src/utils/savings.ts
-import fs5 from "node:fs/promises";
-import path6 from "node:path";
-import os6 from "node:os";
+import fs6 from "node:fs/promises";
+import path7 from "node:path";
+import os7 from "node:os";
 function getStoragePath() {
-  const homeDir = os6.homedir();
-  return path6.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
+  const homeDir = os7.homedir();
+  return path7.join(homeDir, ".gemini", "antigravity-cli", "agy_mcp_savings.json");
 }
 async function loadStorage() {
   const filePath = getStoragePath();
   try {
-    const data = await fs5.readFile(filePath, "utf8");
+    const data = await fs6.readFile(filePath, "utf8");
     return JSON.parse(data);
   } catch {
     return {
@@ -22424,8 +22514,8 @@ async function loadStorage() {
 async function saveStorage(storage) {
   const filePath = getStoragePath();
   try {
-    await fs5.mkdir(path6.dirname(filePath), { recursive: true });
-    await fs5.writeFile(filePath, JSON.stringify(storage, null, 2), "utf8");
+    await fs6.mkdir(path7.dirname(filePath), { recursive: true });
+    await fs6.writeFile(filePath, JSON.stringify(storage, null, 2), "utf8");
   } catch {
   }
 }
@@ -22472,8 +22562,8 @@ async function getSavingsSummary() {
 }
 
 // src/cli/watch.ts
-import fs6 from "node:fs";
-import os7 from "node:os";
+import fs7 from "node:fs";
+import os8 from "node:os";
 var HELP = `agy-mcp watch: live view of Antigravity / Codex / ChatGPT subagent work
 
 Usage: agy-mcp watch [options]
@@ -22524,7 +22614,7 @@ function readEvents(file) {
   for (const f of [`${file}.1`, file]) {
     let raw;
     try {
-      raw = fs6.readFileSync(f);
+      raw = fs7.readFileSync(f);
     } catch {
       continue;
     }
@@ -22546,7 +22636,7 @@ function readEvents(file) {
 }
 var shortId = (id) => id.slice(0, 8);
 var clock = (ts) => new Date(ts).toTimeString().slice(0, 8);
-var home = os7.homedir();
+var home = os8.homedir();
 var tildify = (p) => typeof p === "string" ? p.replace(home, "~") : "";
 function formatDuration(seconds) {
   if (typeof seconds !== "number" || !isFinite(seconds)) return "";
@@ -22755,7 +22845,7 @@ function follow(file, fromOffset, onEvent) {
   const tick = () => {
     let size;
     try {
-      size = fs6.statSync(file).size;
+      size = fs7.statSync(file).size;
     } catch {
       return;
     }
@@ -22764,10 +22854,10 @@ function follow(file, fromOffset, onEvent) {
       carry = "";
     }
     if (size === offset) return;
-    const fd = fs6.openSync(file, "r");
+    const fd = fs7.openSync(file, "r");
     try {
       const buf = Buffer.alloc(size - offset);
-      fs6.readSync(fd, buf, 0, buf.length, offset);
+      fs7.readSync(fd, buf, 0, buf.length, offset);
       offset = size;
       const lines = (carry + buf.toString("utf8")).split("\n");
       carry = lines.pop() || "";
@@ -22779,7 +22869,7 @@ function follow(file, fromOffset, onEvent) {
         }
       }
     } finally {
-      fs6.closeSync(fd);
+      fs7.closeSync(fd);
     }
   };
   setInterval(tick, 250);
@@ -22826,14 +22916,14 @@ async function runStatus() {
   const file = feedPath();
   let text = "";
   try {
-    const size = fs6.statSync(file).size;
+    const size = fs7.statSync(file).size;
     const len = Math.min(size, 1024 * 1024);
     const buf = Buffer.alloc(len);
-    const fd = fs6.openSync(file, "r");
+    const fd = fs7.openSync(file, "r");
     try {
-      fs6.readSync(fd, buf, 0, len, size - len);
+      fs7.readSync(fd, buf, 0, len, size - len);
     } finally {
-      fs6.closeSync(fd);
+      fs7.closeSync(fd);
     }
     text = buf.toString("utf8");
   } catch {
@@ -22891,7 +22981,7 @@ async function runStatus() {
 }
 
 // src/server/stdio.ts
-var execAsync2 = promisify2(exec2);
+var execAsync2 = promisify3(exec2);
 var backgroundTasks = /* @__PURE__ */ new Map();
 function formatPayload(result, savings, customConversationId, workerName = "antigravity") {
   const convId = result.conversationId || result.threadId || customConversationId;
@@ -23671,6 +23761,37 @@ server.tool(
       ]
     };
   }
+);
+server.tool(
+  "local_llm_chat",
+  "Asks the free, private local model (Gemma 4 on Joseph's home server, via Ollama). Good for summaries, drafts, tagging, describing images and questions about Joseph's own work (set use_notes). CPU only, so slow: short answers take 10 to 60 seconds. Use for volume or private material, not for hard reasoning.",
+  {
+    prompt: external_exports.string().describe("The question or task for the local model."),
+    context: external_exports.string().optional().describe("Optional text to work on (notes, code, transcript)."),
+    system_prompt: external_exports.string().optional().describe("Optional system instruction."),
+    images: external_exports.array(external_exports.string()).optional().describe("Optional image file paths on the home server (~ allowed) for the model to look at."),
+    use_notes: external_exports.boolean().optional().default(false).describe("Search Joseph's notes index (memory, project docs, session digests) first and ground the answer in it."),
+    model: external_exports.string().optional().describe("Ollama model name. Default gemma4-e2b."),
+    max_tokens: external_exports.number().optional().describe("Maximum answer length in tokens (default 1024).")
+  },
+  async (args) => {
+    const result = await runLocalChat({
+      prompt: args.prompt,
+      context: args.context,
+      systemPrompt: args.system_prompt,
+      images: args.images,
+      useNotes: args.use_notes,
+      model: args.model,
+      maxTokens: args.max_tokens
+    });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+server.tool(
+  "local_llm_models",
+  "Lists the models installed on Joseph's home server (Ollama), with size and capabilities.",
+  {},
+  async () => ({ content: [{ type: "text", text: JSON.stringify(await listLocalModels(), null, 2) }] })
 );
 async function main() {
   if (process.argv[2] === "watch") {
